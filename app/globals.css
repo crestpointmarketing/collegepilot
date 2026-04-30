@@ -1,26 +1,151 @@
 @import "tailwindcss";
 
+/* ── Runtime-mutable CSS variables (Tweaks panel writes to these) ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --accent: #635bff;
+  --accent-600: #5851e6;
+  --accent-50: #f3f2ff;
+  --accent-100: #e7e5ff;
+
+  --ink: #0a2540;
+  --ink-soft: #425466;
+  --muted: #697386;
+  --muted-2: #8792a2;
+  --line: #e6ebf1;
+  --line-strong: #d1d9e0;
+  --bg: #ffffff;
+  --bg-soft: #f6f9fc;
+  --bg-deep: #f0f4f8;
+
+  --green-50: #ecfdf5;  --green-600: #047857;
+  --amber-50: #fffbeb;  --amber-600: #b45309;
+  --slate-50: #f1f5f9;  --slate-600: #475569;
+  --red-50: #fef2f2;    --red-600: #b91c1c;
+
+  --card-shadow: 0 0 0 1px rgba(60, 66, 87, 0.06), 0 1px 1px rgba(0, 0, 0, 0.04);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* ── Tailwind v4 CSS-first theme ── */
+@theme {
+  /* Accent (references runtime CSS vars) */
+  --color-accent: var(--accent);
+  --color-accent-600: var(--accent-600);
+  --color-accent-50: var(--accent-50);
+  --color-accent-100: var(--accent-100);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Neutrals */
+  --color-ink: #0a2540;
+  --color-ink-soft: #425466;
+  --color-muted: #697386;
+  --color-line: #e6ebf1;
+  --color-line-strong: #d1d9e0;
+  --color-bg-soft: #f6f9fc;
+  --color-bg-deep: #f0f4f8;
+
+  /* Status */
+  --color-green-50: #ecfdf5;
+  --color-green-600: #047857;
+  --color-amber-50: #fffbeb;
+  --color-amber-600: #b45309;
+  --color-slate-50: #f1f5f9;
+  --color-slate-600: #475569;
+  --color-red-50: #fef2f2;
+  --color-red-600: #b91c1c;
+
+  /* Font */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+
+  /* Letter spacing */
+  --tracking-tight: -0.022em;
+  --tracking-tighter: -0.035em;
+
+  /* Shadows */
+  --shadow-card: 0 0 0 1px rgba(60, 66, 87, 0.06), 0 1px 1px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 0 0 1px rgba(60, 66, 87, 0.08), 0 2px 5px rgba(60,66,87,0.08);
+  --shadow-login: 0 0 0 1px rgba(60,66,87,0.04), 0 8px 24px rgba(60,66,87,0.08), 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-drawer: -8px 0 32px rgba(10, 37, 64, 0.12);
+  --shadow-focus: 0 0 0 3px var(--accent-100);
+
+  /* Border radius */
+  --radius-card: 10px;
+  --radius-pill: 9999px;
+
+  /* Animations */
+  --animate-slide-in: slideIn 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-fade-in: fadeIn 180ms ease;
+  --animate-pulse2: pulse2 1.6s ease infinite;
+
+  @keyframes slideIn {
+    from { transform: translateX(20px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes pulse2 {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(0.85); }
+  }
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 }
 
+/* ── Base styles ── */
+* { box-sizing: border-box; }
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+  background: var(--bg-soft);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-100);
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 99px; }
+
+@media print {
+  @page { margin: 1.5cm; size: A4; }
+
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* Release the scroll container so all content renders */
+  [data-scroll] {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    flex: none !important;
+  }
+
+  /* Hide app chrome */
+  header,
+  [data-tweaks-panel],
+  .tweaks-fab {
+    display: none !important;
+  }
+
+  /* Clean up card styles */
+  .shadow-card, [class*="shadow"] {
+    box-shadow: none !important;
+  }
+
+  /* Avoid orphaned headings */
+  h1, h2, h3 { page-break-after: avoid; }
+
+  /* Keep activity/award rows together */
+  .border-b { page-break-inside: avoid; }
 }
