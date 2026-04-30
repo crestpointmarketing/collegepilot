@@ -5,6 +5,7 @@ import { AppProvider } from "@/context/AppContext";
 export const metadata: Metadata = {
   title: "CollegePilot",
   description: "AI-powered admissions strategy for top college applicants",
+  icons: { icon: '/favicon.svg' },
 };
 
 export default function RootLayout({
