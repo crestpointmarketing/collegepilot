@@ -6,8 +6,7 @@ export const metadata: Metadata = {
   title: "CollegePilot",
   description: "AI-powered admissions strategy for top college applicants",
   icons: {
-    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
-    shortcut: '/icon.svg',
+    icon: [{ url: '/icon', type: 'image/png', sizes: '32x32' }],
   },
 };
 
