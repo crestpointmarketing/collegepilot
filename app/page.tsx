@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, Eye, EyeOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
+import { BrandMark } from '@/components/layout/BrandMark';
 
 export default function HomePage() {
   const [email, setEmail] = useState('');
@@ -11,8 +12,17 @@ export default function HomePage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+
+  const handleGoogleSignIn = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) setError(error.message);
+  };
 
   const inp = 'w-full px-3 py-2.5 rounded border border-[var(--line-strong)] text-[13.5px] bg-white focus:outline-none focus:border-[var(--accent)] focus:shadow-focus transition-all';
 
@@ -51,24 +61,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-[var(--bg-soft)]">
       {/* Top nav */}
       <header className="h-16 border-b border-[var(--line)] bg-white flex items-center px-10">
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-600) 100%)' }}
-          >
-            <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="8.5" cy="8.5" r="7" stroke="rgba(255,255,255,0.35)" strokeWidth="1" fill="none" />
-              <path d="M8.5 8.5 L10.8 3.2 L8.5 5.8 Z" fill="white" />
-              <path d="M8.5 8.5 L6.2 13.8 L8.5 11.2 Z" fill="rgba(255,255,255,0.45)" />
-              <path d="M8.5 8.5 L13.8 6.2 L11.2 8.5 Z" fill="rgba(255,255,255,0.6)" />
-              <path d="M8.5 8.5 L3.2 10.8 L5.8 8.5 Z" fill="rgba(255,255,255,0.45)" />
-              <circle cx="8.5" cy="8.5" r="1.1" fill="white" />
-              <rect x="7.2" y="1.4" width="2.6" height="1" rx="0.2" fill="white" opacity="0.9" />
-              <path d="M7.5 2.4 L8.5 3.1 L9.5 2.4" stroke="white" strokeWidth="0.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9" />
-            </svg>
-          </div>
-          <span className="font-semibold text-[14px] text-[var(--ink)]">CollegePilot</span>
-        </div>
+        <BrandMark />
         <nav className="flex-1 flex justify-center items-center gap-1">
           {['Product', 'Pricing', 'For Counselors', 'Contact'].map(link => (
             <button key={link} className="px-3 py-1.5 text-[13.5px] text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors">
@@ -179,15 +172,25 @@ export default function HomePage() {
                     </button>
                   )}
                 </div>
-                <input
-                  className={inp}
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  minLength={6}
-                />
+                <div className="relative">
+                  <input
+                    className={inp + ' pr-10'}
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--ink-soft)] transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
               </div>
 
               {error && (
@@ -213,6 +216,7 @@ export default function HomePage() {
 
               <button
                 type="button"
+                onClick={handleGoogleSignIn}
                 className="w-full py-2.5 rounded border border-[var(--line-strong)] text-[14px] font-medium text-[var(--ink)] bg-white hover:bg-[var(--bg-soft)] transition-colors shadow-card flex items-center justify-center gap-2"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24">

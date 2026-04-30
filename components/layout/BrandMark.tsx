@@ -1,29 +1,32 @@
 export function BrandMark() {
   return (
     <div className="flex items-center gap-2.5">
-      <div
-        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-        style={{ background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-600) 100%)' }}
-      >
-        <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Compass rose — outer ring */}
-          <circle cx="8.5" cy="8.5" r="7" stroke="rgba(255,255,255,0.35)" strokeWidth="1" fill="none" />
-          {/* North needle (accent — pointing up-right) */}
-          <path d="M8.5 8.5 L10.8 3.2 L8.5 5.8 Z" fill="white" />
-          {/* South needle (dimmed) */}
-          <path d="M8.5 8.5 L6.2 13.8 L8.5 11.2 Z" fill="rgba(255,255,255,0.45)" />
-          {/* East needle */}
-          <path d="M8.5 8.5 L13.8 6.2 L11.2 8.5 Z" fill="rgba(255,255,255,0.6)" />
-          {/* West needle */}
-          <path d="M8.5 8.5 L3.2 10.8 L5.8 8.5 Z" fill="rgba(255,255,255,0.45)" />
-          {/* Center dot */}
-          <circle cx="8.5" cy="8.5" r="1.1" fill="white" />
-          {/* Tiny graduation cap above north needle */}
-          <rect x="7.2" y="1.4" width="2.6" height="1" rx="0.2" fill="white" opacity="0.9" />
-          <path d="M7.5 2.4 L8.5 3.1 L9.5 2.4" stroke="white" strokeWidth="0.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9" />
-        </svg>
-      </div>
+      <RadarIcon size={22} />
       <span className="font-semibold text-[14px] text-[var(--ink)]">CollegePilot</span>
     </div>
+  );
+}
+
+export function RadarIcon({ size = 22 }: { size?: number }) {
+  const cx = size / 2, cy = size / 2;
+  const r1 = size * 0.432, r2 = size * 0.282, r3 = size * 0.136;
+  const sweep = { x: cx + r1 * Math.sin(Math.PI / 4), y: cy - r1 * Math.cos(Math.PI / 4) };
+  const top  = { x: cx, y: cy - r1 };
+  const blip = { x: cx + r1 * 0.65 * Math.sin(Math.PI / 4), y: cy - r1 * 0.65 * Math.cos(Math.PI / 4) };
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx={cx} cy={cy} r={r1} stroke="#7c3aed" strokeWidth={size * 0.059} fill="none" />
+      <circle cx={cx} cy={cy} r={r2} stroke="#7c3aed" strokeWidth={size * 0.041} fill="none" opacity="0.55" />
+      <circle cx={cx} cy={cy} r={r3} stroke="#7c3aed" strokeWidth={size * 0.036} fill="none" opacity="0.35" />
+      <path
+        d={`M${cx} ${cy} L${sweep.x.toFixed(2)} ${sweep.y.toFixed(2)} A${r1} ${r1} 0 0 0 ${top.x} ${top.y} Z`}
+        fill="#7c3aed" fillOpacity="0.12"
+      />
+      <line x1={cx} y1={cy} x2={sweep.x.toFixed(2)} y2={sweep.y.toFixed(2)}
+        stroke="#7c3aed" strokeWidth={size * 0.059} strokeLinecap="round" />
+      <circle cx={blip.x.toFixed(2)} cy={blip.y.toFixed(2)} r={size * 0.068} fill="#7c3aed" />
+      <circle cx={cx} cy={cy} r={size * 0.059} fill="#7c3aed" />
+    </svg>
   );
 }
