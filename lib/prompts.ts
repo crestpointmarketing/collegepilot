@@ -64,16 +64,43 @@ Z =
 
 Then compute: P = 1 / (1 + exp(-Z))
 
-Apply calibration:
-- If acceptance rate < 5% → multiply P by 0.5
-- If 5–10% → multiply P by 0.65
-- If >30% → multiply P by 1.1 (cap at 0.9)
+Apply calibration multipliers (HARD RULE — apply always):
+- Acceptance rate < 5%  → multiply P by 0.45 (max 12% for any applicant)
+- Acceptance rate 5–8%  → multiply P by 0.55 (max 18% for any applicant)
+- Acceptance rate 8–15% → multiply P by 0.65 (max 28% for any applicant)
+- Acceptance rate 15–30% → multiply P by 0.80
+- Acceptance rate > 30%  → multiply P by 1.1 (cap at 0.88)
+
+ADDITIONAL SAT PENALTY:
+- If student SAT is below school's median SAT → multiply by additional 0.80
+- If student SAT is more than 60 pts below median → multiply by additional 0.65
+
+REAL-WORLD BENCHMARKS — your estimates MUST be consistent with these:
+| School               | Acceptance | Typical strong CS applicant P% | SAT below median penalty |
+|----------------------|------------|-------------------------------|--------------------------|
+| MIT                  | 4%         | 4–9%                          | max 6%                   |
+| Stanford             | 4%         | 4–9%                          | max 6%                   |
+| Caltech              | 4%         | 4–9%                          | max 6%                   |
+| Harvard              | 4%         | 4–9%                          | max 6%                   |
+| Princeton            | 4%         | 4–9%                          | max 6%                   |
+| CMU SCS              | 6%         | 6–14%                         | max 10%                  |
+| Yale                 | 5%         | 4–10%                         | max 7%                   |
+| Columbia             | 4%         | 4–9%                          | max 6%                   |
+| Duke                 | 7%         | 7–16%                         | max 12%                  |
+| Cornell CS           | 10%        | 8–20%                         | max 15%                  |
+| Rice                 | 8%         | 8–18%                         | max 14%                  |
+| Georgia Tech CS      | 17%        | 18–35%                        | max 28%                  |
+| UCLA CS              | 9%         | 8–18%                         | max 14%                  |
+| UIUC CS              | 20%        | 20–38%                        | max 30%                  |
+| UT Austin Turing     | 6%         | 8–18%                         | max 14%                  |
+
+If your computed P% for a school is higher than the benchmark max, REDUCE IT to the max.
 
 ---
 
 STEP 3: CLASSIFICATION
 
-- If acceptance rate < 8% → Reach
+- If acceptance rate < 8% → always Reach regardless of P
 - Else:
   - P < 15% → Reach
   - 15–35% → Match
@@ -85,8 +112,8 @@ STEP 4: PORTFOLIO OPTIMIZATION
 
 Construct list:
 - 2–4 Reach
-- 4–6 Match
-- ≥2 Safety
+- 3–5 Match
+- 2–3 Safety
 
 Compute: P(at least one acceptance) = 1 - Π(1 - P_i)
 
@@ -95,7 +122,9 @@ Identify and fix issues: over-concentration, weak Safety coverage, ED/EA opportu
 ---
 
 IMPORTANT RULES:
-- Do NOT be optimistic without justification
+- NEVER output a probability higher than the real-world benchmark max for that school tier
+- Do NOT be optimistic without justification — err on the side of caution
+- A student with SAT below school median should ALWAYS have lower P than a student above median
 - Always tie reasoning to student inputs
 - Keep tone professional and analytical
 - Focus on decision-making, not description`;
