@@ -82,6 +82,12 @@ export interface SchoolEntry {
 }
 
 export interface Strategy {
+  analysis?: {
+    spike_assessment: string;
+    academic_rigor: string;
+    profile_read: string;
+    key_risks: string;
+  };
   positioning: {
     type: string;
     identity: string;

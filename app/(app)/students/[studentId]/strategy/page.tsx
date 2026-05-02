@@ -11,6 +11,7 @@ import {
   BarChart3, Zap,
   User, BarChart2, GraduationCap, Lightbulb, ListTodo, Plus, X,
   ChevronDown, ChevronRight, Quote,
+  FlaskConical, BookOpen, Eye, TriangleAlert,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -617,9 +618,36 @@ export default function StrategyPage() {
           </div>
         </StratCard>
 
-        {/* 02 Competitiveness */}
-        <StratCard num="02" title="Competitiveness" icon={<BarChart2 size={16} />}>
+        {/* 02 Analysis */}
+        {strategy.analysis && (
+          <StratCard num="02" title="Profile Analysis" icon={<FlaskConical size={16} />}>
+            <div className="flex flex-col gap-4">
+              <AnalysisBlock icon={<Zap size={13} className="text-violet-500" />} label="Spike Assessment" color="violet" text={strategy.analysis.spike_assessment} />
+              <AnalysisBlock icon={<BookOpen size={13} className="text-blue-500" />} label="Academic Rigor" color="blue" text={strategy.analysis.academic_rigor} />
+              <AnalysisBlock icon={<Eye size={13} className="text-emerald-600" />} label="AO Profile Read" color="emerald" text={strategy.analysis.profile_read} />
+              <AnalysisBlock icon={<TriangleAlert size={13} className="text-amber-500" />} label="Key Risks" color="amber" text={strategy.analysis.key_risks} />
+            </div>
+          </StratCard>
+        )}
+
+        {/* 03 Competitiveness */}
+        <StratCard num={strategy.analysis ? '03' : '02'} title="Competitiveness" icon={<BarChart2 size={16} />}>
           <CompetitivenessChart comp={strategy.competitiveness} />
+          {/* Tier notes */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {(['top10', 'top20', 'top50'] as const).map(tier => {
+              const { level, note } = strategy.competitiveness[tier];
+              const isHigh = level.includes('High'), isMed = level.includes('Medium');
+              const bg = isHigh ? 'bg-emerald-50 border-emerald-100' : isMed ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100';
+              const label = tier === 'top10' ? 'Top 10' : tier === 'top20' ? 'Top 20' : 'Top 50';
+              return (
+                <div key={tier} className={`rounded-lg border p-3 ${bg}`}>
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-[var(--muted)] mb-1.5">{label}</div>
+                  <p className="text-[11.5px] text-[var(--ink-soft)] leading-relaxed">{note}</p>
+                </div>
+              );
+            })}
+          </div>
           <div className="border-t border-[var(--line)] pt-4 flex flex-col gap-1.5">
             {strategy.competitiveness.bullets.map((item, i) => (
               <div key={i} className="flex items-start gap-1.5 text-[12.5px] text-[var(--ink-soft)]">
@@ -629,30 +657,33 @@ export default function StrategyPage() {
           </div>
         </StratCard>
 
-        {/* 03 School List — chart reacts to lever state */}
-        <StratCard num="03" title="School List" icon={<GraduationCap size={16} />}>
+        {/* 04 School List — chart reacts to lever state */}
+        <StratCard num={strategy.analysis ? '04' : '03'} title="School List" icon={<GraduationCap size={16} />}>
           <SchoolChart schools={strategy.schools} adjustments={adjustments} />
-          <div className="border-t border-[var(--line)] mt-4 pt-4">
+          <div className="border-t border-[var(--line)] mt-4 pt-4 flex flex-col gap-3">
             {([
-              ['reach', 'Reach', strategy.schools.reach, Rocket, 'text-red-500', 'text-red-700 bg-red-50'],
-              ['match', 'Match', strategy.schools.match, Target, 'text-amber-500', 'text-amber-700 bg-amber-50'],
-              ['safety', 'Safety', strategy.schools.safety, Shield, 'text-emerald-500', 'text-emerald-700 bg-emerald-50'],
+              ['reach', 'Reach', strategy.schools.reach, Rocket, 'text-red-500', 'text-red-700 bg-red-50 border-red-100'],
+              ['match', 'Match', strategy.schools.match, Target, 'text-amber-500', 'text-amber-700 bg-amber-50 border-amber-100'],
+              ['safety', 'Safety', strategy.schools.safety, Shield, 'text-emerald-500', 'text-emerald-700 bg-emerald-50 border-emerald-100'],
             ] as const).map(([key, label, list, Icon, iconColor, badgeColor]) => (
-              <div key={key} className="flex items-start gap-3 py-2.5 border-b border-[var(--line)] last:border-0">
-                <div className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-pill shrink-0 mt-0.5 ${badgeColor}`}>
+              <div key={key}>
+                <div className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-pill mb-2 border ${badgeColor}`}>
                   <Icon size={10} className={iconColor} />{label}
                 </div>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-col gap-2">
                   {list.map(s => {
                     const delta = Math.round(adjustments[s.name] ?? 0);
                     return (
-                      <span key={s.name} className="inline-flex items-center gap-1 bg-[var(--bg-soft)] border border-[var(--line)] px-2 py-0.5 rounded-pill text-[11.5px] font-medium text-[var(--ink)]">
-                        {s.name}
-                        <span className="text-[10.5px] text-[var(--muted)]">{s.chance}</span>
-                        {delta > 0 && (
-                          <span className="text-[10px] font-bold text-emerald-500">+{delta}pp</span>
-                        )}
-                      </span>
+                      <div key={s.name} className="rounded-lg border border-[var(--line)] bg-[var(--bg-soft)] px-3.5 py-2.5">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[13px] font-semibold text-[var(--ink)]">{s.name}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12px] font-bold" style={{ color: 'var(--accent)' }}>{s.chance}</span>
+                            {delta > 0 && <span className="text-[10px] font-bold text-emerald-500">+{delta}pp</span>}
+                          </div>
+                        </div>
+                        {s.note && <p className="text-[12px] text-[var(--ink-soft)] leading-relaxed">{s.note}</p>}
+                      </div>
                     );
                   })}
                 </div>
@@ -661,16 +692,16 @@ export default function StrategyPage() {
           </div>
         </StratCard>
 
-        {/* 04 Strategy */}
-        <StratCard num="04" title="Application Strategy" icon={<Lightbulb size={16} />}>
+        {/* 05 Strategy */}
+        <StratCard num={strategy.analysis ? '05' : '04'} title="Application Strategy" icon={<Lightbulb size={16} />}>
           <div className="grid grid-cols-2 gap-4">
             <EdEaPlan text={strategy.strategy.ed_ea} />
             <NarrativeCard text={strategy.strategy.narrative} />
           </div>
         </StratCard>
 
-        {/* 05 Plan */}
-        <StratCard num="05" title="Execution Plan" icon={<ListTodo size={16} />}>
+        {/* 06 Plan */}
+        <StratCard num={strategy.analysis ? '06' : '05'} title="Execution Plan" icon={<ListTodo size={16} />}>
           <ExecutionTimeline plan={strategy.plan} />
         </StratCard>
 
@@ -851,6 +882,29 @@ function PageHead({ title, sub, actions }: { title: string; sub: string; actions
   );
 }
 
+function AnalysisBlock({ icon, label, color, text }: { icon: React.ReactNode; label: string; color: string; text: string }) {
+  const bg: Record<string, string> = {
+    violet: 'bg-violet-50 border-violet-100',
+    blue: 'bg-blue-50 border-blue-100',
+    emerald: 'bg-emerald-50 border-emerald-100',
+    amber: 'bg-amber-50 border-amber-100',
+  };
+  const labelColor: Record<string, string> = {
+    violet: 'text-violet-700',
+    blue: 'text-blue-700',
+    emerald: 'text-emerald-700',
+    amber: 'text-amber-700',
+  };
+  return (
+    <div className={`rounded-lg border p-4 ${bg[color] ?? 'bg-[var(--bg-soft)] border-[var(--line)]'}`}>
+      <div className={`flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-widest mb-2 ${labelColor[color] ?? 'text-[var(--muted)]'}`}>
+        {icon}{label}
+      </div>
+      <p className="text-[13px] text-[var(--ink-soft)] leading-relaxed">{text}</p>
+    </div>
+  );
+}
+
 function StratCard({ num, title, icon, children }: { num: string; title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-card shadow-card overflow-hidden">
@@ -861,7 +915,7 @@ function StratCard({ num, title, icon, children }: { num: string; title: string;
           </div>
           <h2 className="text-[15px] font-semibold text-[var(--ink)]">{title}</h2>
         </div>
-        <span className="text-[11px] font-bold text-[var(--muted)] tabular-nums">{num} / 05</span>
+        <span className="text-[11px] font-bold text-[var(--muted)] tabular-nums">{num}</span>
       </div>
       <div className="px-6 py-5">{children}</div>
     </div>

@@ -249,6 +249,12 @@ ${researchContext.map(r => `
 After completing all analysis steps internally, output this exact JSON schema:
 
 {
+  "analysis": {
+    "spike_assessment": "string — Tier (A/B/C) verdict with explicit evidence: cite the 1–2 specific activities/projects that create the spike, their depth and measurable outcomes, and how this spike differentiates this applicant from the typical CS/engineering pool. Be specific — name the project and its metrics.",
+    "academic_rigor": "string — Cite specific AP courses by name and grade (from transcript if available). Assess rigor quality, not just quantity: are these the hard sciences + math sequence expected at top schools? How does the GPA read in context of course load? Any SAT/score gaps vs target school medians that require explanation?",
+    "profile_read": "string — 3–4 sentences written as an admissions officer's first-read impression. What is the dominant narrative? What question does this application raise? What is the single most compelling element and the single most concerning element?",
+    "key_risks": "string — 2–3 specific, concrete risks with direct probability impact. Not generic ('SAT is low') but calibrated ('SAT 1540 is 30pts below MIT median — applies the ×0.80 penalty, reducing P(MIT) by ~3pp. At CMU SCS with 7% CS accept rate, even a strong spike hits the 2.5× cap at ~17.5% max P')."
+  },
   "positioning": {
     "type": "string — precise archetype label derived from spike + major alignment",
     "identity": "string — 2–3 sentences: core identity, what makes this applicant distinctive, calibrated to actual profile strength",
@@ -258,15 +264,15 @@ After completing all analysis steps internally, output this exact JSON schema:
   "competitiveness": {
     "top10": {
       "level": "High|Medium-High|Medium|Medium-Low|Low",
-      "note": "string — cite specific Z-score factors and calibrated probability rationale"
+      "note": "string — 2–3 sentences: which specific Z-score factors drive this level, what the SAT/GPA delta vs median implies, what the spike contributes, what the calibration multiplier does to raw P"
     },
     "top20": {
       "level": "High|Medium-High|Medium|Medium-Low|Low",
-      "note": "string"
+      "note": "string — same format: name the factors, cite the numbers"
     },
     "top50": {
       "level": "Very High|High|Medium-High|Medium",
-      "note": "string"
+      "note": "string — same format"
     },
     "bullets": [
       "string — portfolio-level insight with P(at least one acceptance) logic",
@@ -279,21 +285,21 @@ After completing all analysis steps internally, output this exact JSON schema:
       {
         "name": "string — real school name",
         "chance": "X%",
-        "note": "string — cite Z-score factors: academic fit, spike alignment, selectivity pressure, calibration applied"
+        "note": "string — 2 sentences: (1) what drives P upward for this student at this school specifically (spike fit, program alignment, demographics), (2) what drives P downward (selectivity cap, SAT penalty, pool competition). End with the calibration applied."
       }
     ],
     "match": [
       {
         "name": "string",
         "chance": "X%",
-        "note": "string"
+        "note": "string — same 2-sentence format"
       }
     ],
     "safety": [
       {
         "name": "string",
         "chance": "X%",
-        "note": "string"
+        "note": "string — same 2-sentence format"
       }
     ]
   },
@@ -329,5 +335,8 @@ Rules:
 - Use real school names (MIT, Stanford, CMU, Harvard, Yale, Princeton, Duke, Rice, Cornell, Berkeley, Georgia Tech, UCLA, UMich, UIUC, UT Austin Turing, etc.)
 - P% must reflect the logistic model with calibration — do not pad probabilities
 - No "well-rounded student", no guaranteed admissions language
+- analysis.spike_assessment, analysis.academic_rigor, analysis.profile_read, analysis.key_risks MUST be substantive — minimum 2 sentences each, cite specific data from the student profile
+- school notes MUST follow the 2-sentence format: positive drivers then negative drivers
+- competitiveness notes MUST cite specific numbers (SAT delta, GPA delta, calibration multiplier)
 - CRITICAL: All JSON string values must be on a single line — no literal newlines or tabs inside strings`;
 }

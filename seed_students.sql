@@ -115,7 +115,7 @@ BEGIN
         {"id": "w3", "title": "Dallas Regional Science & Engineering Fair (DRSEF) — Honorable Mention, Top 4", "grade": 11, "level": "Regional"},
         {"id": "w4", "title": "President's Volunteer Service Award — Gold (100+ hrs)", "grade": 11, "level": "National"},
         {"id": "w5", "title": "International Service Honor Recognition — Gold Award", "grade": 11, "level": "National"},
-        {"id": "w6", "title": "Scholastic Writing Awards — Regional Silver Key", "grade": 11, "level": "Regional"},
+        {"id": "w6", "title": "Scholastic Writing Awards — Regional Silver Key", "grade": 9, "level": "Regional"},
         {"id": "w7", "title": "CTY Johns Hopkins Talent Search — Advanced Level Qualification", "grade": 10, "level": "National"},
         {"id": "w8", "title": "PSAT/NMSQT — National Merit Commended Scholar", "grade": 11, "level": "National"},
         {"id": "w9", "title": "Python IT Specialist Certification (CompTIA/Certiport)", "grade": 11, "level": "National"},
