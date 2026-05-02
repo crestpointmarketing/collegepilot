@@ -36,7 +36,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Heavy placement in finance, consulting, government, and academia. CS/SCS graduates have near-100% FAANG offer rates.',
   },
   {
-    id: 'yale', name: 'Yale University', short: 'Yale', city: 'New Haven', state: 'CT', region: 'East', type: 'Private', size: 'Large', setting: 'Urban', accept: 3, sat: 1570, gpa: 4.14, ranking: 5,
+    id: 'yale', name: 'Yale University', short: 'Yale', city: 'New Haven', state: 'CT', region: 'East', type: 'Private', size: 'Large', setting: 'Urban', accept: 5, sat: 1570, gpa: 4.14, ranking: 5,
     majors: ['Economics', 'Computer Science', 'Political Science', 'Biology', 'History', 'Psychology', 'English', 'Applied Mathematics'],
     topRanked: true, vibe: ['Research'],
     why: 'Liberal arts emphasis; breadth + depth both required.',
@@ -50,7 +50,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Dominant in law, policy, and media. CS graduates increasingly entering tech. The Yale alumni network has deep influence in East Coast finance and government.',
   },
   {
-    id: 'columbia', name: 'Columbia University', short: 'Columbia', city: 'New York', state: 'NY', region: 'East', type: 'Private', size: 'Large', setting: 'Urban', accept: 3, sat: 1570, gpa: 4.14, ranking: 12,
+    id: 'columbia', name: 'Columbia University', short: 'Columbia', city: 'New York', state: 'NY', region: 'East', type: 'Private', size: 'Large', setting: 'Urban', accept: 4, sat: 1570, gpa: 4.14, ranking: 12,
     majors: ['Computer Science', 'Economics', 'Engineering', 'Pre-Med', 'Financial Economics', 'Neuroscience', 'Political Science', 'Statistics'],
     topRanked: true, vibe: ['Research', 'Builder'],
     why: 'NYC location + Core Curriculum creates uniquely multi-disciplinary graduates.',
@@ -92,7 +92,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'CS/Engineering graduates dominate FAANG hiring. Hotel School graduates lead major hospitality groups globally. ILR graduates are prominent in law, HR, and labor policy.',
   },
   {
-    id: 'brown', name: 'Brown University', short: 'Brown', city: 'Providence', state: 'RI', region: 'East', type: 'Private', size: 'Medium', setting: 'Urban', accept: 5, sat: 1560, gpa: 4.08, ranking: 9,
+    id: 'brown', name: 'Brown University', short: 'Brown', city: 'Providence', state: 'RI', region: 'East', type: 'Private', size: 'Medium', setting: 'Urban', accept: 6, sat: 1560, gpa: 4.08, ranking: 9,
     majors: ['Computer Science', 'Economics', 'Biology', 'International Relations', 'Applied Mathematics', 'Cognitive Science', 'Public Health', 'Computational Biology'],
     topRanked: true, vibe: ['Research', 'Builder'],
     why: 'Open Curriculum allows self-directed academic paths; APMA strong for CS+math.',
@@ -122,7 +122,7 @@ export const SCHOOLS: School[] = [
 
   // ── Top STEM / Elite Private ─────────────────────────────────────────────
   {
-    id: 'mit', name: 'Massachusetts Institute of Technology', short: 'MIT', city: 'Cambridge', state: 'MA', region: 'East', type: 'Private', size: 'Medium', setting: 'Urban', accept: 4, csAccept: 4, sat: 1570, gpa: 4.17, ranking: 1,
+    id: 'mit', name: 'Massachusetts Institute of Technology', short: 'MIT', city: 'Cambridge', state: 'MA', region: 'East', type: 'Private', size: 'Medium', setting: 'Urban', accept: 5, csAccept: 4, sat: 1570, gpa: 4.17, ranking: 1,
     majors: ['Computer Science', 'Engineering', 'Physics', 'Mathematics', 'Brain & Cognitive Sciences', 'EECS', 'Mechanical Engineering', 'Economics'],
     topRanked: true, vibe: ['Research', 'Quant', 'Builder'],
     why: 'Unmatched depth in technical research across every STEM discipline.',
@@ -278,7 +278,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'NASA/energy (ExxonMobil/Chevron)/medical (Texas Medical Center) are the dominant sectors. CS graduates flow into major tech companies. Architecture graduates work at top global firms.',
   },
   {
-    id: 'notredame', name: 'University of Notre Dame', short: 'Notre Dame', city: 'Notre Dame', state: 'IN', region: 'Midwest', type: 'Private', size: 'Medium', setting: 'Suburban', accept: 12, sat: 1520, gpa: 4.05, ranking: 20,
+    id: 'notredame', name: 'University of Notre Dame', short: 'Notre Dame', city: 'Notre Dame', state: 'IN', region: 'Midwest', type: 'Private', size: 'Medium', setting: 'Suburban', accept: 9, sat: 1520, gpa: 4.05, ranking: 20,
     majors: ['Finance', 'Computer Science', 'Engineering', 'Pre-Law', 'Political Science', 'Theology', 'Architecture', 'Business Analytics'],
     topRanked: true, vibe: ['Research', 'Builder'],
     why: 'Strong CS via ESTEEM program; tight alumni network; Catholic mission values service.',
@@ -334,7 +334,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Government/diplomacy (State Dept/embassies), law (top-5 law school admissions), and consulting (McKinsey DC Office) are the three dominant tracks.',
   },
   {
-    id: 'tufts', name: 'Tufts University', short: 'Tufts', city: 'Medford', state: 'MA', region: 'East', type: 'Private', size: 'Medium', setting: 'Suburban', accept: 10, sat: 1530, gpa: 4.00, ranking: 32,
+    id: 'tufts', name: 'Tufts University', short: 'Tufts', city: 'Medford', state: 'MA', region: 'East', type: 'Private', size: 'Medium', setting: 'Suburban', accept: 11, sat: 1530, gpa: 4.00, ranking: 32,
     majors: ['Computer Science', 'International Relations', 'Engineering', 'Biology', 'Cognitive Science', 'Environmental Studies', 'Economics', 'Pre-Vet/Pre-Med'],
     topRanked: false, vibe: ['Research', 'Builder'],
     why: 'Strong CS + Fletcher school for policy; Boston proximity for internships.',
@@ -348,7 +348,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Fletcher graduates enter State Dept/UN/major NGOs. CS+Engineering stay in the Boston tech and biotech ecosystem. Pre-med graduates have a ~70% medical school admission rate, well above national average.',
   },
   {
-    id: 'usc', name: 'University of Southern California', short: 'USC', city: 'Los Angeles', state: 'CA', region: 'West', type: 'Private', size: 'Large', setting: 'Urban', accept: 12, sat: 1490, gpa: 3.94, ranking: 27,
+    id: 'usc', name: 'University of Southern California', short: 'USC', city: 'Los Angeles', state: 'CA', region: 'West', type: 'Private', size: 'Large', setting: 'Urban', accept: 10, sat: 1490, gpa: 3.94, ranking: 27,
     majors: ['Computer Science', 'Cinematic Arts', 'Business', 'Engineering', 'Game Design', 'Communication', 'Architecture', 'Interactive Media & Games'],
     topRanked: false, vibe: ['Builder', 'Research'],
     why: 'Viterbi CS strong; entertainment-tech crossover unique; LA network unmatched.',
@@ -390,7 +390,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Co-op graduates average starting salary exceeds $80K. Boston tech/finance/biotech direct hire rate is exceptional. ~70% of full-time offers come from co-op employers. Khoury CS: Amazon, Microsoft, HubSpot.',
   },
   {
-    id: 'nyu', name: 'New York University', short: 'NYU', city: 'New York', state: 'NY', region: 'East', type: 'Private', size: 'Large', setting: 'Urban', accept: 13, sat: 1510, gpa: 3.90, ranking: 35,
+    id: 'nyu', name: 'New York University', short: 'NYU', city: 'New York', state: 'NY', region: 'East', type: 'Private', size: 'Large', setting: 'Urban', accept: 8, sat: 1510, gpa: 3.90, ranking: 35,
     majors: ['Computer Science', 'Business', 'Film', 'Liberal Arts', 'Data Science', 'Finance', 'Psychology', 'Social Work'],
     topRanked: false, vibe: ['Builder', 'Research'],
     why: 'Courant Institute (top math/CS) + NYC startup/finance access; Stern for business.',
@@ -404,7 +404,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Stern graduates dominate NYC finance (Goldman/JP Morgan/BlackRock). Tisch graduates work on Broadway and in Hollywood. Courant CS/data science graduates enter tech and quantitative finance.',
   },
   {
-    id: 'bc', name: 'Boston College', short: 'Boston College', city: 'Chestnut Hill', state: 'MA', region: 'East', type: 'Private', size: 'Large', setting: 'Suburban', accept: 18, sat: 1490, gpa: 4.04, ranking: 35,
+    id: 'bc', name: 'Boston College', short: 'Boston College', city: 'Chestnut Hill', state: 'MA', region: 'East', type: 'Private', size: 'Large', setting: 'Suburban', accept: 13, sat: 1490, gpa: 4.04, ranking: 35,
     majors: ['Finance', 'Economics', 'Computer Science', 'Biology', 'Nursing', 'Political Science', 'Communication', 'Philosophy'],
     topRanked: false, vibe: ['Research', 'Builder'],
     why: 'Jesuit liberal arts tradition; Carroll School of Management strong; Boston internship access.',
@@ -574,7 +574,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Engineering and CS graduates join Ford, GM, and FAANG. Ross graduates dominate Michigan and Ohio finance/consulting. The Michigan Mafia network has deep reach in corporate leadership nationwide.',
   },
   {
-    id: 'uva', name: 'University of Virginia', short: 'UVA', city: 'Charlottesville', state: 'VA', region: 'East', type: 'Public', size: 'Large', setting: 'Suburban', accept: 17, sat: 1470, gpa: 4.30, ranking: 26,
+    id: 'uva', name: 'University of Virginia', short: 'UVA', city: 'Charlottesville', state: 'VA', region: 'East', type: 'Public', size: 'Large', setting: 'Suburban', accept: 15, sat: 1470, gpa: 4.30, ranking: 26,
     majors: ['Computer Science', 'Commerce', 'Engineering', 'Government', 'Biology', 'Psychology', 'Data Science', 'Nursing'],
     topRanked: false, vibe: ['Research', 'Builder'],
     why: 'SEAS engineering strong; "Why UVA" supplement heavily weighted; honor tradition.',
