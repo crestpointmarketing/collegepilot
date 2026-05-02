@@ -74,9 +74,12 @@ export default function ResearchPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ school: schoolInput.trim(), program: programInput.trim() }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || data.error || 'Research failed');
-      setResult(data);
+      const text = await res.text();
+      let data: Record<string, unknown>;
+      try { data = JSON.parse(text); }
+      catch { throw new Error(res.ok ? 'Invalid response from server' : `Server error ${res.status}`); }
+      if (!res.ok || data.error) throw new Error(String(data.detail ?? data.error ?? 'Research failed'));
+      setResult(data as unknown as ResearchResult);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Research failed');
     } finally {

@@ -3,7 +3,7 @@ import { getExaClient } from '@/lib/exa';
 import { getAnthropicClient } from '@/lib/ai';
 
 export const runtime = 'nodejs';
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,39 +15,32 @@ export async function POST(req: NextRequest) {
 
     const exa = getExaClient();
 
-    const instructions = `Research "${school} ${program}" comprehensively for a college admissions counselor.
+    // Fast parallel search: official site + Reddit
+    const [official, reddit] = await Promise.all([
+      exa.searchAndContents(
+        `${school} ${program} admission requirements GPA SAT acceptance rate`,
+        { numResults: 4, text: { maxCharacters: 2000 }, type: 'auto' }
+      ),
+      exa.searchAndContents(
+        `${school} ${program} reddit applicants students honest review`,
+        { numResults: 4, text: { maxCharacters: 2000 }, includeDomains: ['reddit.com'], type: 'auto' }
+      ),
+    ]);
 
-1. Search the official ${school} website for: admission requirements (GPA, SAT/ACT ranges, acceptance rate, interview/portfolio requirements), program details (class size, curriculum, unique features, research opportunities, honors thesis), and career outcomes (salaries, top employers, internship rates, grad school placement).
+    const officialText = official.results
+      .map(r => `[${r.title}](${r.url})\n${r.text ?? ''}`)
+      .join('\n\n');
+    const redditText = reddit.results
+      .map(r => `[${r.title}](${r.url})\n${r.text ?? ''}`)
+      .join('\n\n');
 
-2. Search Reddit (r/ApplyingToCollege, r/UTAustin or school-specific subreddits, r/college, r/cscareerquestions) for honest student perspectives on the program — what students love, hate, common complaints, realistic admission odds, and tips that worked.
+    const allText = `=== OFFICIAL SOURCES ===\n${officialText}\n\n=== REDDIT / COMMUNITY ===\n${redditText}`;
 
-3. Note any discrepancies between what the official site says vs what students report on Reddit.
-
-Be specific with numbers wherever available (GPA 3.9+, SAT 1500+, $148K avg salary, 40 students per cohort, 95% placement rate, etc.).`;
-
-    // Create and wait for Exa research
-    const created = await exa.research.create({
-      instructions,
-      model: 'exa-research',
-    });
-
-    const finished = await exa.research.pollUntilFinished(created.researchId, {
-      pollInterval: 4000,
-    });
-
-    // The actual output is at output.content (not output.text or output.json)
-    const researchText = (finished as { output?: { content?: string } }).output?.content ?? '';
-
-    if (!researchText) {
-      return NextResponse.json({ error: 'Research returned no content' }, { status: 500 });
-    }
-
-    // Use Claude to convert the research text into structured JSON
     const anthropic = getAnthropicClient();
     const mergePrompt = `You are analyzing research about "${school} ${program}" for a college admissions counselor.
 
 Research content:
-${researchText.slice(0, 8000)}
+${allText.slice(0, 10000)}
 
 Produce a final structured research summary as valid JSON matching this exact schema:
 {
@@ -63,8 +56,8 @@ Produce a final structured research summary as valid JSON matching this exact sc
 Rules:
 - Be specific with numbers where available
 - community_insights must reflect actual student opinions, not marketing
-- application_tips must be 5–7 actionable items specific to this program
-- Output ONLY valid JSON, no markdown fences`;
+- application_tips must be 5 actionable items specific to this program
+- Output ONLY valid JSON, no markdown fences, no literal newlines inside string values`;
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -77,16 +70,15 @@ Rules:
       .map(b => (b.type === 'text' ? b.text : ''))
       .join('');
 
-    const cleaned = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
-    const result = JSON.parse(cleaned);
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Claude returned no JSON');
+    const result = JSON.parse(jsonMatch[0]);
 
-    // Extract source URLs from markdown links in the research text
-    const urlPattern = /https?:\/\/[^\s\)]+/g;
-    const urlMatches = [...new Set(researchText.match(urlPattern) ?? [])];
-    const sources = urlMatches.slice(0, 10).map(url => ({
-      title: url,
-      url,
-      type: url.includes('reddit.com') ? 'reddit' : 'web',
+    const allResults = [...official.results, ...reddit.results];
+    const sources = allResults.map(r => ({
+      title: r.title || r.url,
+      url: r.url,
+      type: r.url.includes('reddit.com') ? 'reddit' : 'web',
     }));
 
     return NextResponse.json({
