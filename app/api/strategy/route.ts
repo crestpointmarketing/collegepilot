@@ -6,7 +6,7 @@ import { createServerSupabaseClient } from '@/lib/supabase.server';
 import type { Student, Strategy } from '@/types';
 
 export const runtime = 'nodejs';
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
@@ -70,12 +70,8 @@ export async function POST(req: NextRequest) {
     const userPrompt = buildStrategyPrompt(student, researchContext);
 
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 16000,
-      thinking: {
-        type: 'enabled',
-        budget_tokens: 8000,
-      },
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 8000,
       system: STRATEGY_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
     });
