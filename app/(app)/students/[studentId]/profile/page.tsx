@@ -557,14 +557,15 @@ function CourseRow({ course, onChange, onRemove, inp }: {
       </div>
       <div className="col-span-2">
         <label className="block text-[11px] text-[var(--muted)] mb-1">AP score</label>
-        <input
-          className={`${inp} text-[12.5px] disabled:opacity-40 disabled:bg-[var(--line)]`}
-          type="number" min="1" max="5"
+        <select
+          className={`${inp} text-[12.5px] ${course.level !== 'AP' ? 'opacity-40 bg-[var(--line)] pointer-events-none' : ''}`}
           value={course.apScore ?? ''}
           onChange={e => onChange({ ...course, apScore: e.target.value ? parseInt(e.target.value) : undefined })}
-          placeholder={course.level === 'AP' ? '1–5' : '—'}
           disabled={course.level !== 'AP'}
-        />
+        >
+          <option value="">—</option>
+          {[5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n}</option>)}
+        </select>
       </div>
       <div className="col-span-1 flex justify-end pb-0.5">
         <button type="button" onClick={onRemove} className="p-1.5 rounded text-[var(--muted-2)] hover:text-red-500 hover:bg-red-50 transition-colors">
