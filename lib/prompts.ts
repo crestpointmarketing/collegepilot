@@ -1,14 +1,19 @@
 import type { Student } from '@/types';
 import { SCHOOLS } from './schools';
 
+// Data sourced from: Common Data Set submissions, USNWR, school admissions offices.
+// csAccept = CS/engineering program-specific admit rate (where available and publicly reported).
 function buildSchoolReferenceTable(): string {
   const rows = SCHOOLS.map(s => {
     const majors = s.majors.slice(0, 2).join(', ');
-    return `| ${s.short.padEnd(16)} | ${s.type.padEnd(7)} | ${String(s.accept + '%').padEnd(7)} | ${String(s.sat).padEnd(8)} | ${String(s.gpa).padEnd(8)} | #${String(s.ranking).padEnd(3)} | ${majors}`;
+    const acceptStr = s.csAccept != null
+      ? `${s.accept}% (CS:${s.csAccept}%)`
+      : `${s.accept}%`;
+    return `| ${s.short.padEnd(16)} | ${s.type.padEnd(7)} | ${acceptStr.padEnd(14)} | ${String(s.sat).padEnd(8)} | ${String(s.gpa).padEnd(8)} | #${String(s.ranking).padEnd(3)} | ${majors}`;
   });
   return [
-    '| School           | Type    | Accept  | Med SAT  | Med GPA  | Rank | Top Majors',
-    '|------------------|---------|---------|----------|----------|------|------------',
+    '| School           | Type    | Accept (CS-specific)  | Med SAT  | Med GPA  | Rank | Top Majors',
+    '|------------------|---------|----------------------|----------|----------|------|------------',
     ...rows,
   ].join('\n');
 }
@@ -75,26 +80,9 @@ ADDITIONAL SAT PENALTY:
 - If student SAT is below school's median SAT → multiply by additional 0.80
 - If student SAT is more than 60 pts below median → multiply by additional 0.65
 
-REAL-WORLD BENCHMARKS — your estimates MUST be consistent with these:
-| School               | Acceptance | Typical strong CS applicant P% | SAT below median penalty |
-|----------------------|------------|-------------------------------|--------------------------|
-| MIT                  | 4%         | 4–9%                          | max 6%                   |
-| Stanford             | 4%         | 4–9%                          | max 6%                   |
-| Caltech              | 4%         | 4–9%                          | max 6%                   |
-| Harvard              | 4%         | 4–9%                          | max 6%                   |
-| Princeton            | 4%         | 4–9%                          | max 6%                   |
-| CMU SCS              | 6%         | 6–14%                         | max 10%                  |
-| Yale                 | 5%         | 4–10%                         | max 7%                   |
-| Columbia             | 4%         | 4–9%                          | max 6%                   |
-| Duke                 | 7%         | 7–16%                         | max 12%                  |
-| Cornell CS           | 10%        | 8–20%                         | max 15%                  |
-| Rice                 | 8%         | 8–18%                         | max 14%                  |
-| Georgia Tech CS      | 17%        | 18–35%                        | max 28%                  |
-| UCLA CS              | 9%         | 8–18%                         | max 14%                  |
-| UIUC CS              | 20%        | 20–38%                        | max 30%                  |
-| UT Austin Turing     | 6%         | 8–18%                         | max 14%                  |
+CALIBRATION RULE — use the CS-specific accept rate (shown as "CS:X%" in the school table above) when computing Selectivity pressure. If only the overall rate is available, use that. The CS-specific rates come from Common Data Set submissions and school admissions offices.
 
-If your computed P% for a school is higher than the benchmark max, REDUCE IT to the max.
+For any school where the CS accept rate is under 10%: your final P% for that school must not exceed 2.5× the CS accept rate (e.g. CS accept 7% → P max 17.5%). For schools under 5% CS accept, max P is 2× the CS accept rate.
 
 ---
 

@@ -96,8 +96,9 @@ export interface School {
   type: 'Public' | 'Private';
   size: 'Small' | 'Medium' | 'Large';
   setting: 'Urban' | 'Suburban' | 'Rural';
-  accept: number;
-  sat: number;
+  accept: number;       // overall admit rate (source: Common Data Set)
+  csAccept?: number;    // CS/engineering program-specific admit rate where available
+  sat: number;          // median SAT composite (50th pct, source: Common Data Set)
   gpa: number;
   ranking: number;
   majors: string[];

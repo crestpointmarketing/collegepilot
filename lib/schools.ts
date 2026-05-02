@@ -73,7 +73,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Wharton dominates Wall Street. Engineering graduates flow heavily into Big Tech and startups. The M&T program is a premier gateway to tech-finance careers.',
   },
   {
-    id: 'cornell', name: 'Cornell University', short: 'Cornell', city: 'Ithaca', state: 'NY', region: 'East', type: 'Private', size: 'Large', setting: 'Suburban', accept: 10, sat: 1530, gpa: 4.07, ranking: 13,
+    id: 'cornell', name: 'Cornell University', short: 'Cornell', city: 'Ithaca', state: 'NY', region: 'East', type: 'Private', size: 'Large', setting: 'Suburban', accept: 10, csAccept: 8, sat: 1530, gpa: 4.07, ranking: 13,
     majors: ['Computer Science', 'Engineering', 'Hotel Administration', 'Agriculture', 'Industrial & Labor Relations', 'Architecture', 'Information Science', 'Pre-Med'],
     topRanked: true, vibe: ['Builder', 'Research'],
     why: 'Top 5 CS program; 7 undergraduate colleges allow cross-disciplinary flexibility.',
@@ -117,7 +117,7 @@ export const SCHOOLS: School[] = [
 
   // ── Top STEM / Elite Private ─────────────────────────────────────────────
   {
-    id: 'mit', name: 'Massachusetts Institute of Technology', short: 'MIT', city: 'Cambridge', state: 'MA', region: 'East', type: 'Private', size: 'Medium', setting: 'Urban', accept: 4, sat: 1570, gpa: 4.17, ranking: 1,
+    id: 'mit', name: 'Massachusetts Institute of Technology', short: 'MIT', city: 'Cambridge', state: 'MA', region: 'East', type: 'Private', size: 'Medium', setting: 'Urban', accept: 4, csAccept: 4, sat: 1570, gpa: 4.17, ranking: 1,
     majors: ['Computer Science', 'Engineering', 'Physics', 'Mathematics', 'Brain & Cognitive Sciences', 'EECS', 'Mechanical Engineering', 'Economics'],
     topRanked: true, vibe: ['Research', 'Quant', 'Builder'],
     why: 'Unmatched depth in technical research across every STEM discipline.',
@@ -131,7 +131,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'MIT alumni-founded companies have a combined valuation exceeding $2 trillion. Top destinations: FAANG, Jane Street, Two Sigma, SpaceX, and top-tier PhD programs worldwide.',
   },
   {
-    id: 'stanford', name: 'Stanford University', short: 'Stanford', city: 'Stanford', state: 'CA', region: 'West', type: 'Private', size: 'Large', setting: 'Suburban', accept: 4, sat: 1560, gpa: 3.96, ranking: 3,
+    id: 'stanford', name: 'Stanford University', short: 'Stanford', city: 'Stanford', state: 'CA', region: 'West', type: 'Private', size: 'Large', setting: 'Suburban', accept: 4, csAccept: 3, sat: 1560, gpa: 3.96, ranking: 3,
     majors: ['Computer Science', 'Engineering', 'Economics', 'Biology', 'Human-Computer Interaction', 'Symbolic Systems', 'Mathematical & Computational Science', 'Product Design'],
     topRanked: true, vibe: ['Builder', 'Research', 'Quant'],
     why: 'Silicon Valley pipeline + interdisciplinary flexibility.',
@@ -145,7 +145,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Founding team of Google, Apple, Netflix, and countless startups. Highest density of VC-backed founders of any university. Stanford GSB alumni dominate tech-adjacent finance.',
   },
   {
-    id: 'caltech', name: 'California Institute of Technology', short: 'Caltech', city: 'Pasadena', state: 'CA', region: 'West', type: 'Private', size: 'Small', setting: 'Suburban', accept: 6, sat: 1575, gpa: 4.19, ranking: 6,
+    id: 'caltech', name: 'California Institute of Technology', short: 'Caltech', city: 'Pasadena', state: 'CA', region: 'West', type: 'Private', size: 'Small', setting: 'Suburban', accept: 6, csAccept: 5, sat: 1575, gpa: 4.19, ranking: 6,
     majors: ['Engineering', 'Physics', 'Mathematics', 'Computer Science', 'Chemistry', 'Astrophysics', 'Biology', 'Electrical Engineering'],
     topRanked: true, vibe: ['Research', 'Quant'],
     why: 'Extreme depth in STEM; research-first culture.',
@@ -159,7 +159,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: '70%+ of graduates pursue graduate or professional degrees. Industry destinations: aerospace (Boeing/SpaceX), semiconductors (Intel/Nvidia), and top-tier tech companies.',
   },
   {
-    id: 'cmu', name: 'Carnegie Mellon University', short: 'CMU', city: 'Pittsburgh', state: 'PA', region: 'East', type: 'Private', size: 'Medium', setting: 'Urban', accept: 11, sat: 1560, gpa: 4.21, ranking: 22,
+    id: 'cmu', name: 'Carnegie Mellon University', short: 'CMU', city: 'Pittsburgh', state: 'PA', region: 'East', type: 'Private', size: 'Medium', setting: 'Urban', accept: 11, csAccept: 7, sat: 1560, gpa: 4.21, ranking: 22,
     majors: ['Computer Science', 'Engineering', 'Business', 'Fine Arts', 'Information Systems', 'Statistics & Machine Learning', 'Human-Computer Interaction', 'Computational Biology'],
     topRanked: true, vibe: ['Builder', 'Research', 'Quant'],
     why: 'Top-ranked CS; research and industry connections are exceptional.',
@@ -485,7 +485,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'EECS graduates enter FAANG at among the highest rates of any program nationally. Haas graduates dominate Bay Area finance and consulting. Berkeley PhD alumni are among the most sought by top graduate programs worldwide.',
   },
   {
-    id: 'ucla', name: 'UCLA', short: 'UCLA', city: 'Los Angeles', state: 'CA', region: 'West', type: 'Public', size: 'Large', setting: 'Urban', accept: 9, sat: 1455, gpa: 4.18, ranking: 20,
+    id: 'ucla', name: 'UCLA', short: 'UCLA', city: 'Los Angeles', state: 'CA', region: 'West', type: 'Public', size: 'Large', setting: 'Urban', accept: 9, csAccept: 4, sat: 1455, gpa: 4.18, ranking: 20,
     majors: ['Computer Science', 'Engineering', 'Economics', 'Biology', 'Film & TV', 'Cognitive Science', 'Public Affairs', 'Applied Mathematics'],
     topRanked: false, vibe: ['Builder', 'Research'],
     why: 'Strong CS + media/entertainment crossover; LA location valuable for tech-media roles.',
@@ -597,7 +597,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Kenan-Flagler graduates enter NC/NY finance and consulting. Journalism graduates work at NPR, NYT, and Reuters. Public health graduates join CDC and FDA (aided by Research Triangle geography).',
   },
   {
-    id: 'georgia_tech', name: 'Georgia Institute of Technology', short: 'Georgia Tech', city: 'Atlanta', state: 'GA', region: 'South', type: 'Public', size: 'Large', setting: 'Urban', accept: 17, sat: 1490, gpa: 4.07, ranking: 35,
+    id: 'georgia_tech', name: 'Georgia Institute of Technology', short: 'Georgia Tech', city: 'Atlanta', state: 'GA', region: 'South', type: 'Public', size: 'Large', setting: 'Urban', accept: 17, csAccept: 10, sat: 1490, gpa: 4.07, ranking: 35,
     majors: ['Computer Science', 'Engineering', 'Mathematics', 'Business (Scheller)', 'Industrial Engineering', 'Aerospace Engineering', 'Biomedical Engineering', 'Data Science'],
     topRanked: true, vibe: ['Builder', 'Quant'],
     why: 'Top CS and engineering program; strong industry co-op and startup ecosystem.',
@@ -611,7 +611,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'CS and Engineering graduates join FAANG, Boeing, and Lockheed Martin. Atlanta tech ecosystem (NCR, Salesforce ATL, Google ATL) provides strong local opportunities. Scheller graduates are top-ranked in supply chain career placement.',
   },
   {
-    id: 'uiuc', name: 'University of Illinois Urbana-Champaign', short: 'UIUC', city: 'Champaign', state: 'IL', region: 'Midwest', type: 'Public', size: 'Large', setting: 'Suburban', accept: 45, sat: 1450, gpa: 3.83, ranking: 35,
+    id: 'uiuc', name: 'University of Illinois Urbana-Champaign', short: 'UIUC', city: 'Champaign', state: 'IL', region: 'Midwest', type: 'Public', size: 'Large', setting: 'Suburban', accept: 45, csAccept: 6, sat: 1450, gpa: 3.83, ranking: 35,
     majors: ['Computer Science', 'Engineering', 'Business (Gies)', 'Agriculture', 'Statistics', 'Information Sciences', 'Electrical Engineering', 'Mathematics'],
     topRanked: false, vibe: ['Builder', 'Quant'],
     why: 'CS Direct Admit is top 5 nationally; alumni include Google/Amazon/Microsoft founders.',
@@ -681,7 +681,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Graduates largely stay in Florida (Orlando tech/healthcare/tourism). CS/Engineering benefit from Tampa and Miami growing tech sectors. Warrington business graduates join JPMorgan and Bank of America Florida offices.',
   },
   {
-    id: 'utaustin', name: 'UT Austin', short: 'UT Austin', city: 'Austin', state: 'TX', region: 'South', type: 'Public', size: 'Large', setting: 'Urban', accept: 31, sat: 1395, gpa: 3.83, ranking: 38,
+    id: 'utaustin', name: 'UT Austin', short: 'UT Austin', city: 'Austin', state: 'TX', region: 'South', type: 'Public', size: 'Large', setting: 'Urban', accept: 31, csAccept: 6, sat: 1395, gpa: 3.83, ranking: 38,
     majors: ['Computer Science (Turing)', 'Engineering', 'Business (McCombs)', 'Liberal Arts', 'Information Science', 'Data Science', 'Aerospace Engineering', 'Architecture'],
     topRanked: false, vibe: ['Builder'],
     why: 'Turing Scholars Honors program is elite; Austin tech ecosystem unmatched in South.',
