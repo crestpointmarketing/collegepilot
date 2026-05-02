@@ -339,6 +339,24 @@ function CompetitivenessChart({ comp }: { comp: Strategy['competitiveness'] }) {
   );
 }
 
+/* ── JSON repair ──────────────────────────────────────────── */
+
+function repairJson(input: string): string {
+  let inString = false;
+  let escaped = false;
+  let out = '';
+  for (let i = 0; i < input.length; i++) {
+    const c = input[i];
+    if (escaped) { out += c; escaped = false; continue; }
+    if (c === '\\' && inString) { out += c; escaped = true; continue; }
+    if (c === '"') { inString = !inString; out += c; continue; }
+    if (inString && (c === '\n' || c === '\r')) { out += ' '; continue; }
+    if (inString && c === '\t') { out += ' '; continue; }
+    out += c;
+  }
+  return out.replace(/,(\s*[}\]])/g, '$1');
+}
+
 /* ── Page ─────────────────────────────────────────────────── */
 
 export default function StrategyPage() {
@@ -409,15 +427,7 @@ export default function StrategyPage() {
       }
       const jsonMatch = fullText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('Invalid response from server');
-      // Sanitize literal newlines/tabs inside JSON string values
-      const sanitize = (s: string) =>
-        s.replace(/"(?:[^"\\]|\\.)*"/g, m =>
-          m.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ')
-        );
-      let parsed;
-      try { parsed = JSON.parse(jsonMatch[0]); }
-      catch { parsed = JSON.parse(sanitize(jsonMatch[0])); }
-      saveStrategy(studentId, parsed);
+      saveStrategy(studentId, JSON.parse(repairJson(jsonMatch[0])));
     } catch (e) {
       console.warn('Strategy generation failed', e);
       setGenError(e instanceof Error ? e.message : 'Unknown error');
