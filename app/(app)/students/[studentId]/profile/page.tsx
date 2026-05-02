@@ -536,18 +536,18 @@ function CourseRow({ course, onChange, onRemove, inp }: {
   return (
     <div className="bg-[var(--bg-soft)] rounded-lg p-3 border border-[var(--line)] grid grid-cols-12 gap-2 items-end">
       <div className="col-span-1">
-        <label className="block text-[11px] text-[var(--muted)] mb-1">Year</label>
-        <select className={`${inp} text-[12.5px]`} value={course.year} onChange={e => onChange({ ...course, year: parseInt(e.target.value) as 9|10|11|12 })}>
+        <label className="block text-[11px] text-[var(--muted)] mb-1">Yr</label>
+        <select className={`${inp} text-[12.5px] px-1.5`} value={course.year} onChange={e => onChange({ ...course, year: parseInt(e.target.value) as 9|10|11|12 })}>
           {[9, 10, 11, 12].map(y => <option key={y} value={y}>{y}</option>)}
         </select>
       </div>
       <div className="col-span-2">
         <label className="block text-[11px] text-[var(--muted)] mb-1">Level</label>
-        <select className={`${inp} text-[12.5px]`} value={course.level} onChange={e => onChange({ ...course, level: e.target.value as Course['level'] })}>
+        <select className={`${inp} text-[12.5px] px-1.5`} value={course.level} onChange={e => onChange({ ...course, level: e.target.value as Course['level'] })}>
           {['AP', 'IB', 'Honors', 'Dual Enrollment', 'Regular'].map(l => <option key={l} value={l}>{l}</option>)}
         </select>
       </div>
-      <div className="col-span-5">
+      <div className="col-span-4">
         <label className="block text-[11px] text-[var(--muted)] mb-1">Course name</label>
         <input className={`${inp} text-[12.5px]`} value={course.name} onChange={e => onChange({ ...course, name: e.target.value })} placeholder="e.g. AP Calculus BC" />
       </div>
@@ -555,14 +555,14 @@ function CourseRow({ course, onChange, onRemove, inp }: {
         <label className="block text-[11px] text-[var(--muted)] mb-1">Grade</label>
         <input className={`${inp} text-[12.5px]`} value={course.grade} onChange={e => onChange({ ...course, grade: e.target.value })} placeholder="A / 95" />
       </div>
-      <div className="col-span-1">
+      <div className="col-span-2">
         <label className="block text-[11px] text-[var(--muted)] mb-1">AP score</label>
         <input
-          className={`${inp} text-[12.5px]`}
+          className={`${inp} text-[12.5px] disabled:opacity-40 disabled:bg-[var(--line)]`}
           type="number" min="1" max="5"
           value={course.apScore ?? ''}
           onChange={e => onChange({ ...course, apScore: e.target.value ? parseInt(e.target.value) : undefined })}
-          placeholder="—"
+          placeholder={course.level === 'AP' ? '1–5' : '—'}
           disabled={course.level !== 'AP'}
         />
       </div>
