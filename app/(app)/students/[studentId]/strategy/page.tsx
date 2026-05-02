@@ -350,6 +350,7 @@ export default function StrategyPage() {
   const strategy = strategies[studentId] ?? null;
   const [generating, setGenerating] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
+  const [genError, setGenError] = useState<string | null>(null);
   const [leverStates, setLeverStates] = useState<Record<number, LeverState>>({});
 
   const parsedLevers = useMemo(
@@ -380,6 +381,7 @@ export default function StrategyPage() {
   const handleGenerate = async (forceRegenerate = false) => {
     if (!student) return;
     setGenerating(true);
+    setGenError(null);
     setLoadingStep(0);
     setLeverStates({});
     for (let i = 0; i < LOADING_STEPS.length; i++) {
@@ -392,10 +394,15 @@ export default function StrategyPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ student, forceRegenerate }),
       });
-      if (!res.ok) throw new Error('API error');
-      saveStrategy(studentId, await res.json());
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Server error ${res.status}`);
+      }
+      const data = await res.json();
+      saveStrategy(studentId, data);
     } catch (e) {
       console.warn('Strategy generation failed', e);
+      setGenError(e instanceof Error ? e.message : 'Unknown error');
     } finally {
       setGenerating(false);
     }
@@ -451,6 +458,11 @@ export default function StrategyPage() {
           </div>
           <h3 className="text-[16px] font-semibold text-[var(--ink)] mb-2">No strategy generated yet</h3>
           <p className="text-[13px] text-[var(--muted)] mb-6 max-w-xs mx-auto">Run the analysis to produce positioning, school list, and execution plan.</p>
+          {genError && (
+            <div className="mb-5 mx-auto max-w-sm bg-red-50 border border-red-200 text-red-700 text-[12.5px] rounded-lg px-4 py-3">
+              Error: {genError}
+            </div>
+          )}
           <button onClick={() => handleGenerate()} className="inline-flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium" style={{ background: 'var(--accent)' }}>
             <Sparkles size={14} /> Generate Strategy
           </button>

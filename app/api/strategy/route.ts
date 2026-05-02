@@ -81,8 +81,9 @@ export async function POST(req: NextRequest) {
       .map(block => (block.type === 'text' ? block.text : ''))
       .join('');
 
-    const cleaned = text.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
-    const strategy: Strategy = JSON.parse(cleaned);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON in model response');
+    const strategy: Strategy = JSON.parse(jsonMatch[0]);
 
     return NextResponse.json(strategy);
   } catch (error) {
