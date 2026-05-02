@@ -45,6 +45,7 @@ const blankCourse = (): Course => ({
   level: 'AP',
   grade: 'A',
   year: 11,
+  apScore: 5,
 });
 
 const blankProject = (): Project => ({
@@ -543,7 +544,10 @@ function CourseRow({ course, onChange, onRemove, inp }: {
       </div>
       <div className="col-span-2">
         <label className="block text-[11px] text-[var(--muted)] mb-1">Level</label>
-        <select className={`${inp} text-[12.5px] px-1.5`} value={course.level} onChange={e => onChange({ ...course, level: e.target.value as Course['level'] })}>
+        <select className={`${inp} text-[12.5px] px-1.5`} value={course.level} onChange={e => {
+          const lvl = e.target.value as Course['level'];
+          onChange({ ...course, level: lvl, apScore: lvl === 'AP' ? (course.apScore ?? 5) : undefined });
+        }}>
           {['AP', 'IB', 'Honors', 'Dual Enrollment', 'Regular'].map(l => <option key={l} value={l}>{l}</option>)}
         </select>
       </div>
@@ -559,7 +563,7 @@ function CourseRow({ course, onChange, onRemove, inp }: {
         <label className="block text-[11px] text-[var(--muted)] mb-1">AP score</label>
         <select
           className={`${inp} text-[12.5px] ${course.level !== 'AP' ? 'opacity-40 bg-[var(--line)] pointer-events-none' : ''}`}
-          value={course.apScore ?? ''}
+          value={course.level === 'AP' ? (course.apScore ?? 5) : ''}
           onChange={e => onChange({ ...course, apScore: e.target.value ? parseInt(e.target.value) : undefined })}
           disabled={course.level !== 'AP'}
         >
