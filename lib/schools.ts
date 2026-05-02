@@ -1,9 +1,14 @@
 import type { School } from '@/types';
 
+// Data sources:
+// - accept: 2024-2025 overall admit rates (Common Data Set + 52hrtt.com/klln/n/w/info/F1765872904357)
+// - csAccept: CS/engineering program-specific admit rates (CMU SCS admissions, school CDS, applicant data)
+// - sat: median SAT composite 50th percentile (Common Data Set Section C)
+// - gpa: median unweighted GPA (Common Data Set Section C)
 export const SCHOOLS: School[] = [
   // ── Ivy League ───────────────────────────────────────────────────────────
   {
-    id: 'harvard', name: 'Harvard University', short: 'Harvard', city: 'Cambridge', state: 'MA', region: 'East', type: 'Private', size: 'Large', setting: 'Urban', accept: 3, sat: 1580, gpa: 4.18, ranking: 2,
+    id: 'harvard', name: 'Harvard University', short: 'Harvard', city: 'Cambridge', state: 'MA', region: 'East', type: 'Private', size: 'Large', setting: 'Urban', accept: 4, sat: 1580, gpa: 4.18, ranking: 2,
     majors: ['Economics', 'Computer Science', 'Biology', 'Government', 'Statistics', 'Mathematics', 'History', 'Psychology'],
     topRanked: true, vibe: ['Research', 'Quant'],
     why: 'Elite network + holistic strength signals required.',
@@ -31,7 +36,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Heavy placement in finance, consulting, government, and academia. CS/SCS graduates have near-100% FAANG offer rates.',
   },
   {
-    id: 'yale', name: 'Yale University', short: 'Yale', city: 'New Haven', state: 'CT', region: 'East', type: 'Private', size: 'Large', setting: 'Urban', accept: 5, sat: 1570, gpa: 4.14, ranking: 5,
+    id: 'yale', name: 'Yale University', short: 'Yale', city: 'New Haven', state: 'CT', region: 'East', type: 'Private', size: 'Large', setting: 'Urban', accept: 3, sat: 1570, gpa: 4.14, ranking: 5,
     majors: ['Economics', 'Computer Science', 'Political Science', 'Biology', 'History', 'Psychology', 'English', 'Applied Mathematics'],
     topRanked: true, vibe: ['Research'],
     why: 'Liberal arts emphasis; breadth + depth both required.',
@@ -45,7 +50,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Dominant in law, policy, and media. CS graduates increasingly entering tech. The Yale alumni network has deep influence in East Coast finance and government.',
   },
   {
-    id: 'columbia', name: 'Columbia University', short: 'Columbia', city: 'New York', state: 'NY', region: 'East', type: 'Private', size: 'Large', setting: 'Urban', accept: 4, sat: 1570, gpa: 4.14, ranking: 12,
+    id: 'columbia', name: 'Columbia University', short: 'Columbia', city: 'New York', state: 'NY', region: 'East', type: 'Private', size: 'Large', setting: 'Urban', accept: 3, sat: 1570, gpa: 4.14, ranking: 12,
     majors: ['Computer Science', 'Economics', 'Engineering', 'Pre-Med', 'Financial Economics', 'Neuroscience', 'Political Science', 'Statistics'],
     topRanked: true, vibe: ['Research', 'Builder'],
     why: 'NYC location + Core Curriculum creates uniquely multi-disciplinary graduates.',
@@ -145,7 +150,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Founding team of Google, Apple, Netflix, and countless startups. Highest density of VC-backed founders of any university. Stanford GSB alumni dominate tech-adjacent finance.',
   },
   {
-    id: 'caltech', name: 'California Institute of Technology', short: 'Caltech', city: 'Pasadena', state: 'CA', region: 'West', type: 'Private', size: 'Small', setting: 'Suburban', accept: 6, csAccept: 5, sat: 1575, gpa: 4.19, ranking: 6,
+    id: 'caltech', name: 'California Institute of Technology', short: 'Caltech', city: 'Pasadena', state: 'CA', region: 'West', type: 'Private', size: 'Small', setting: 'Suburban', accept: 3, csAccept: 3, sat: 1575, gpa: 4.19, ranking: 6,
     majors: ['Engineering', 'Physics', 'Mathematics', 'Computer Science', 'Chemistry', 'Astrophysics', 'Biology', 'Electrical Engineering'],
     topRanked: true, vibe: ['Research', 'Quant'],
     why: 'Extreme depth in STEM; research-first culture.',
@@ -189,7 +194,7 @@ export const SCHOOLS: School[] = [
 
   // ── Top 10–25 Private ─────────────────────────────────────────────────────
   {
-    id: 'uchicago', name: 'University of Chicago', short: 'UChicago', city: 'Chicago', state: 'IL', region: 'Midwest', type: 'Private', size: 'Medium', setting: 'Urban', accept: 5, sat: 1580, gpa: 4.02, ranking: 6,
+    id: 'uchicago', name: 'University of Chicago', short: 'UChicago', city: 'Chicago', state: 'IL', region: 'Midwest', type: 'Private', size: 'Medium', setting: 'Urban', accept: 5, csAccept: 5, sat: 1580, gpa: 4.02, ranking: 6,
     majors: ['Economics', 'Mathematics', 'Computer Science', 'Statistics', 'Philosophy', 'Political Science', 'Molecular Engineering', 'Public Policy'],
     topRanked: true, vibe: ['Research', 'Quant'],
     why: 'Core curriculum + intense intellectual culture; econ/theory CS programs exceptionally strong.',
@@ -245,7 +250,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Among the highest medical school admission rates nationally. Public health graduates enter WHO/CDC/NIH. BME graduates flow into medical devices (Medtronic/Stryker) and biotech.',
   },
   {
-    id: 'vanderbilt', name: 'Vanderbilt University', short: 'Vanderbilt', city: 'Nashville', state: 'TN', region: 'South', type: 'Private', size: 'Large', setting: 'Suburban', accept: 6, sat: 1570, gpa: 3.90, ranking: 18,
+    id: 'vanderbilt', name: 'Vanderbilt University', short: 'Vanderbilt', city: 'Nashville', state: 'TN', region: 'South', type: 'Private', size: 'Large', setting: 'Suburban', accept: 5, sat: 1570, gpa: 3.90, ranking: 18,
     majors: ['Economics', 'Neuroscience', 'Computer Science', 'Engineering', 'Human & Organizational Development', 'Cognitive Studies', 'Pre-Med', 'Education'],
     topRanked: true, vibe: ['Research', 'Builder'],
     why: 'Growing CS program; Nashville tech ecosystem; financial aid competitive.',
@@ -287,7 +292,7 @@ export const SCHOOLS: School[] = [
     careerOutcomes: 'Finance, consulting, and law are the three dominant tracks. Mendoza graduates have among the highest employment rates nationally. Alumni network in Catholic-affiliated institutions and traditional industries is powerful.',
   },
   {
-    id: 'washu', name: 'Washington University in St. Louis', short: 'WashU', city: 'St. Louis', state: 'MO', region: 'Midwest', type: 'Private', size: 'Medium', setting: 'Suburban', accept: 13, sat: 1570, gpa: 4.05, ranking: 24,
+    id: 'washu', name: 'Washington University in St. Louis', short: 'WashU', city: 'St. Louis', state: 'MO', region: 'Midwest', type: 'Private', size: 'Medium', setting: 'Suburban', accept: 10, sat: 1570, gpa: 4.05, ranking: 24,
     majors: ['Computer Science', 'Engineering', 'Business', 'Pre-Med', 'Economics', 'Psychology', 'Biology', 'Art & Architecture'],
     topRanked: true, vibe: ['Research', 'Builder'],
     why: 'McKelvey engineering + Olin business; interdisciplinary dual degrees available.',
