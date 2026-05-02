@@ -56,13 +56,15 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       try {
         const anthropicStream = client.messages.stream({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 6000,
+          model: 'claude-sonnet-4-6',
+          max_tokens: 16000,
+          thinking: { type: 'enabled', budget_tokens: 8000 },
           system: STRATEGY_SYSTEM_PROMPT,
           messages: [{ role: 'user', content: userPrompt }],
         });
 
         for await (const event of anthropicStream) {
+          // Only forward text tokens — skip thinking blocks
           if (
             event.type === 'content_block_delta' &&
             event.delta.type === 'text_delta'
