@@ -398,8 +398,18 @@ export default function StrategyPage() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `Server error ${res.status}`);
       }
-      const data = await res.json();
-      saveStrategy(studentId, data);
+      // Stream response to avoid gateway timeout
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullText += decoder.decode(value, { stream: true });
+      }
+      const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Invalid response from server');
+      saveStrategy(studentId, JSON.parse(jsonMatch[0]));
     } catch (e) {
       console.warn('Strategy generation failed', e);
       setGenError(e instanceof Error ? e.message : 'Unknown error');

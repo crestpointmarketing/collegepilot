@@ -3,93 +3,82 @@ import { getAnthropicClient } from '@/lib/ai';
 import { buildStrategyPrompt, STRATEGY_SYSTEM_PROMPT, type SchoolResearchContext } from '@/lib/prompts';
 import { INITIAL_STRATEGIES } from '@/lib/data';
 import { createServerSupabaseClient } from '@/lib/supabase.server';
-import type { Student, Strategy } from '@/types';
+import type { Student } from '@/types';
 
-export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
-  try {
-    const { student, forceRegenerate }: { student: Student; forceRegenerate?: boolean } = await req.json();
+  const { student, forceRegenerate }: { student: Student; forceRegenerate?: boolean } = await req.json();
 
-    if (!student) {
-      return NextResponse.json({ error: 'Missing student data' }, { status: 400 });
-    }
-
-    // Return canned strategy for sample students unless user explicitly regenerates
-    if (!forceRegenerate && INITIAL_STRATEGIES[student.id]) {
-      return NextResponse.json(INITIAL_STRATEGIES[student.id]);
-    }
-
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 });
-    }
-
-    // Look up saved research for the student's preferred schools
-    let researchContext: SchoolResearchContext[] = [];
-    try {
-      const supabase = await createServerSupabaseClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (user && student.preferred) {
-        const preferredSchools = student.preferred
-          .split(/[,;]/)
-          .map(s => s.trim().toLowerCase())
-          .filter(Boolean);
-
-        const { data: researchRows } = await supabase
-          .from('school_research')
-          .select('school_name, program, data')
-          .eq('user_id', user.id);
-
-        if (researchRows) {
-          researchContext = researchRows
-            .filter(row =>
-              preferredSchools.some(pref =>
-                row.school_name.toLowerCase().includes(pref) ||
-                pref.includes(row.school_name.toLowerCase())
-              )
-            )
-            .map(row => ({
-              school_name: row.school_name,
-              program: row.program,
-              admission_requirements: row.data?.admission_requirements ?? '',
-              program_details: row.data?.program_details ?? '',
-              career_outcomes: row.data?.career_outcomes ?? '',
-              community_insights: row.data?.community_insights ?? '',
-              application_tips: row.data?.application_tips ?? [],
-              official_vs_community: row.data?.official_vs_community ?? '',
-            }));
-        }
-      }
-    } catch {
-      // Research lookup is best-effort — don't fail strategy generation
-    }
-
-    const client = getAnthropicClient();
-    const userPrompt = buildStrategyPrompt(student, researchContext);
-
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 8000,
-      system: STRATEGY_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userPrompt }],
-    });
-
-    const text = message.content
-      .filter(block => block.type === 'text')
-      .map(block => (block.type === 'text' ? block.text : ''))
-      .join('');
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('No JSON in model response');
-    const strategy: Strategy = JSON.parse(jsonMatch[0]);
-
-    return NextResponse.json(strategy);
-  } catch (error) {
-    console.error('Strategy generation error:', error);
-    const fallback = Object.values(INITIAL_STRATEGIES)[0];
-    if (fallback) return NextResponse.json(fallback);
-    return NextResponse.json({ error: 'Strategy generation failed' }, { status: 500 });
+  if (!student) {
+    return NextResponse.json({ error: 'Missing student data' }, { status: 400 });
   }
+
+  if (!forceRegenerate && INITIAL_STRATEGIES[student.id]) {
+    return NextResponse.json(INITIAL_STRATEGIES[student.id]);
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 });
+  }
+
+  // Research lookup is best-effort
+  let researchContext: SchoolResearchContext[] = [];
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && student.preferred) {
+      const preferred = student.preferred.split(/[,;]/).map(s => s.trim().toLowerCase()).filter(Boolean);
+      const { data: rows } = await supabase
+        .from('school_research').select('school_name, program, data').eq('user_id', user.id);
+      if (rows) {
+        researchContext = rows
+          .filter(r => preferred.some(p => r.school_name.toLowerCase().includes(p) || p.includes(r.school_name.toLowerCase())))
+          .map(r => ({
+            school_name: r.school_name,
+            program: r.program,
+            admission_requirements: r.data?.admission_requirements ?? '',
+            program_details: r.data?.program_details ?? '',
+            career_outcomes: r.data?.career_outcomes ?? '',
+            community_insights: r.data?.community_insights ?? '',
+            application_tips: r.data?.application_tips ?? [],
+            official_vs_community: r.data?.official_vs_community ?? '',
+          }));
+      }
+    }
+  } catch { /* best-effort */ }
+
+  const client = getAnthropicClient();
+  const userPrompt = buildStrategyPrompt(student, researchContext);
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const anthropicStream = client.messages.stream({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 6000,
+          system: STRATEGY_SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: userPrompt }],
+        });
+
+        for await (const event of anthropicStream) {
+          if (
+            event.type === 'content_block_delta' &&
+            event.delta.type === 'text_delta'
+          ) {
+            controller.enqueue(encoder.encode(event.delta.text));
+          }
+        }
+      } catch (err) {
+        console.error('Strategy stream error:', err);
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
 }
