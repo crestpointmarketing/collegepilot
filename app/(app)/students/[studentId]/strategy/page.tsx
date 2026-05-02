@@ -409,7 +409,15 @@ export default function StrategyPage() {
       }
       const jsonMatch = fullText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('Invalid response from server');
-      saveStrategy(studentId, JSON.parse(jsonMatch[0]));
+      // Sanitize literal newlines/tabs inside JSON string values
+      const sanitize = (s: string) =>
+        s.replace(/"(?:[^"\\]|\\.)*"/g, m =>
+          m.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ')
+        );
+      let parsed;
+      try { parsed = JSON.parse(jsonMatch[0]); }
+      catch { parsed = JSON.parse(sanitize(jsonMatch[0])); }
+      saveStrategy(studentId, parsed);
     } catch (e) {
       console.warn('Strategy generation failed', e);
       setGenError(e instanceof Error ? e.message : 'Unknown error');

@@ -276,5 +276,6 @@ Rules:
 - Safety: 2–3 schools
 - Use real school names (MIT, Stanford, CMU, Harvard, Yale, Princeton, Duke, Rice, Cornell, Berkeley, Georgia Tech, UCLA, UMich, UIUC, UT Austin Turing, etc.)
 - P% must reflect the logistic model with calibration — do not pad probabilities
-- No "well-rounded student", no guaranteed admissions language`;
+- No "well-rounded student", no guaranteed admissions language
+- CRITICAL: All JSON string values must be on a single line — no literal newlines or tabs inside strings`;
 }
