@@ -36,8 +36,8 @@ BEGIN
       "targetRange": "Top 10",
       "risk": "Balanced",
       "preferred": "MIT, Stanford, CMU, Caltech",
-      "traits": "AI Systems Builder with production-scale deployments across speech processing, financial reasoning, and human-AI interaction. Built Whisper→LLM→XTTS speech therapy pipeline achieving 46% fluency improvement. USACO Gold Division (promoted from Silver via perfect score). 100+ volunteer service hours. PSAT/NMSQT National Merit Commended Scholar. Python IT Specialist Certification.",
-      "angles": "Three deployed AI systems targeting real-world problems (healthcare, career coaching, finance); USACO Gold via perfect-score promotion; science fair winner with societal impact framing (pediatric speech therapy accessibility). National Merit Commended Scholar.",
+      "traits": "AI Systems Builder with production-scale deployments across speech processing, financial reasoning, and human-AI interaction. Built Whisper→LLM→XTTS speech therapy pipeline (SpeakWise) achieving 46% fluency improvement, published at HPHS SciTech Fair and DRSEF; submitting to Regeneron STS 2026 and S.-T. Yau High School Science Award. USACO Gold Division (perfect-score promotion from Silver). National Merit Commended Scholar. Python IT Specialist Certification.",
+      "angles": "Publishable research with measurable societal impact (SpeakWise targets 1.2M+ children/yr, $154B–$186B annual burden); STS + Yau submission signals serious research identity. Three deployed AI systems (healthcare, career coaching, finance). USACO Gold via perfect-score promotion. National Merit Commended Scholar. Narrative arc: CS as a tool for equity and accessibility.",
       "color": "#0ea5e9",
       "status": "Draft",
       "updated": "May 2026",
@@ -118,7 +118,20 @@ BEGIN
         {"id": "w6", "title": "Scholastic Writing Awards — Regional Silver Key", "grade": 11, "level": "Regional"},
         {"id": "w7", "title": "CTY Johns Hopkins Talent Search — Advanced Level Qualification", "grade": 10, "level": "National"},
         {"id": "w8", "title": "PSAT/NMSQT — National Merit Commended Scholar", "grade": 11, "level": "National"},
-        {"id": "w9", "title": "Python IT Specialist Certification (CompTIA/Certiport)", "grade": 11, "level": "National"}
+        {"id": "w9", "title": "Python IT Specialist Certification (CompTIA/Certiport)", "grade": 11, "level": "National"},
+        {"id": "w10", "title": "DRSEF (Dallas Regional Science & Engineering Fair) — Top 4 / Honorable Mention (SpeakWise)", "grade": 11, "level": "Regional"}
+      ],
+      "projects": [
+        {
+          "id": "p1",
+          "name": "SpeakWise: AI-Assisted Limited Repair Platform for Children with Language Disorders",
+          "field": "CS / AI / Speech Technology",
+          "type": "Research",
+          "description": "End-to-end pipeline: OpenAI Whisper ASR → Google Gemini 2.0 LLM linguistic repair → XTTS v2 zero-shot voice cloning. Introduced Repair Intensity Parameter (λ=0–1) as tunable fluency-identity tradeoff controller. Evaluated on UCLASS corpus (N=40 pediatric speech samples). At λ=0.6: 46% fluency improvement, BERTScore >0.95 (semantic fidelity preserved), 100% stutter block reduction, speech rate +110%. Web-based Gradio interface with side-by-side spectrogram analysis for SLP augmentation.",
+          "outcome": "1st Place + Jay Ingram Award (HPHS SciTech Fair 2025); Top 4 / Honorable Mention DRSEF; submitting to Regeneron STS 2026 and S.-T. Yau High School Science Award",
+          "affiliation": "Highland Park High School (Independent Research)",
+          "impact": "Targets 1.2M+ US children diagnosed with speech/language disorders annually; addresses $154B–$186B annual societal cost of untreated speech disorders; low-cost SLP augmentation tool bridging Digital Divide in pediatric speech technology"
+        }
       ],
       "courses": [
         {"id": "c1",  "name": "English 1",               "level": "Honors", "grade": "91", "year": 9},
