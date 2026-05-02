@@ -1,3 +1,23 @@
+export interface Course {
+  id: string;
+  name: string;
+  level: 'AP' | 'IB' | 'Honors' | 'Dual Enrollment' | 'Regular';
+  grade: string;       // letter or numeric: "A", "A-", "95"
+  year: 9 | 10 | 11 | 12;
+  apScore?: number;    // 1–5, only for AP courses
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  field: string;       // "CS", "Biology", "Economics", etc.
+  type: 'Research' | 'Independent' | 'Product' | 'Startup';
+  description: string;
+  outcome: string;     // "Published paper", "GitHub 2k stars", "Patent filed"
+  affiliation?: string; // "MIT PRIMES", "Stanford OHS", "Independent"
+  impact?: string;
+}
+
 export interface Activity {
   id: string;
   category: string;
@@ -48,6 +68,11 @@ export interface Student {
   updated: string;
   activities: Activity[];
   awards: Award[];
+  // Extended academic profile (optional — improves strategy accuracy)
+  gpaUnweighted?: string;
+  schoolAvgSat?: number;
+  courses?: Course[];
+  projects?: Project[];
 }
 
 export interface SchoolEntry {

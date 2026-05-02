@@ -143,8 +143,37 @@ export function buildStrategyPrompt(student: Student, researchContext?: SchoolRe
         .join('\n')
     : '  None listed';
 
+  // Courses: group by year, show level + name + grade + AP score
+  const coursesSummary = student.courses && student.courses.length > 0
+    ? (() => {
+        const byYear: Record<number, typeof student.courses> = {};
+        for (const c of student.courses!) {
+          if (!byYear[c.year]) byYear[c.year] = [];
+          byYear[c.year]!.push(c);
+        }
+        return [9, 10, 11, 12]
+          .filter(y => byYear[y]?.length)
+          .map(y => {
+            const rows = byYear[y]!.map(c =>
+              `    ${c.level.padEnd(14)} ${c.name.padEnd(35)} Grade: ${c.grade}${c.apScore ? `  AP: ${c.apScore}` : ''}`
+            ).join('\n');
+            return `  Grade ${y}:\n${rows}`;
+          }).join('\n');
+      })()
+    : null;
+
+  // Projects: signal-rich section for spike detection
+  const projectsSummary = student.projects && student.projects.length > 0
+    ? student.projects
+        .slice(0, 6)
+        .map((p, i) => `  ${i + 1}. [${p.type}/${p.field}] ${p.name}${p.affiliation ? ` (${p.affiliation})` : ''} — ${p.description} | Outcome: ${p.outcome}${p.impact ? ` | Impact: ${p.impact}` : ''}`)
+        .join('\n')
+    : null;
+
   const spikeHint = student.awards.some(a => a.level === 'National' || a.level === 'International')
     ? 'A (national-level recognition)'
+    : (student.projects && student.projects.length > 0)
+    ? 'A/B (research/project depth — evaluate from projects section)'
     : student.activities.length >= 3
     ? 'B (strong consistent involvement)'
     : 'C (developing)';
@@ -160,6 +189,11 @@ export function buildStrategyPrompt(student: Student, researchContext?: SchoolRe
     return `  ${s.short}: SAT ${satDelta >= 0 ? '+' : ''}${satDelta} vs median, GPA ${gpaDelta >= 0 ? '+' : ''}${gpaDelta.toFixed(2)} vs median`;
   }).join('\n');
 
+  // School context adjustment: if school avg SAT is known, show student relative to school
+  const schoolContextNote = student.schoolAvgSat
+    ? `- School avg SAT: ${student.schoolAvgSat} (student is ${satNum > student.schoolAvgSat ? '+' : ''}${satNum - student.schoolAvgSat} vs school mean — use for context score adjustment)`
+    : '';
+
   return `Run your full 8-step analysis on this student. Then output ONLY valid JSON — no prose, no markdown fences outside the JSON.
 
 SCHOOL REFERENCE DATABASE — you MUST anchor every P% estimate to these real statistics:
@@ -173,10 +207,10 @@ STUDENT PROFILE:
 - Grade: ${student.grade}
 - High School: ${student.school || 'Not specified'} (${student.schoolType})
 - Location: ${student.city || 'Not specified'}
-- GPA: ${student.gpa || 'Not provided'} (${student.gpaType})
+- GPA (weighted): ${student.gpa || 'Not provided'}${student.gpaUnweighted ? ` | GPA (unweighted): ${student.gpaUnweighted}` : ''}
 - SAT: ${student.sat || 'Not taken'}
 - ACT: ${student.act || 'Not taken'}
-- AP/IB courses: ${student.apCount}
+- AP/IB courses total: ${student.apCount}
 - Intended major: ${student.major || 'Undecided'}
 - Secondary interest: ${student.secondary || 'None'}
 - Spike tier (estimated): ${spikeHint}
@@ -187,13 +221,14 @@ STUDENT PROFILE:
 - Preferred schools: ${student.preferred || 'None specified'}
 - Academic strengths: ${student.strengths.join(', ') || 'Not specified'}
 - Known weaknesses: ${student.weak.join(', ') || 'None specified'}
-
+${schoolContextNote}
+${coursesSummary ? `\nTranscript (course-level detail):\n${coursesSummary}` : ''}
 Activities:
 ${activitiesSummary}
 
 Awards/Honors:
 ${awardsSummary}
-
+${projectsSummary ? `\nResearch & Projects (HIGH SIGNAL — weight heavily for spike and rigor scores):\n${projectsSummary}` : ''}
 Positioning angles: ${student.angles || 'Not specified'}
 Profile notes: ${student.traits || 'Not specified'}
 ${researchContext && researchContext.length > 0 ? `
