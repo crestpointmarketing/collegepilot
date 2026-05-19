@@ -229,7 +229,7 @@ export function ChatBot() {
     <>
       {open && (
         <div
-          className="fixed bottom-[132px] right-6 z-50 w-[400px] flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl overflow-hidden"
+          className="fixed bottom-[132px] right-6 z-50 w-[400px] flex flex-col rounded-2xl border border-[var(--border)] bg-white shadow-2xl overflow-hidden"
           style={{ height: '560px' }}
         >
           {/* Header */}
