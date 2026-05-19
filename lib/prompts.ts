@@ -155,7 +155,7 @@ export function buildStrategyPrompt(student: Student, researchContext?: SchoolRe
           .filter(y => byYear[y]?.length)
           .map(y => {
             const rows = byYear[y]!.map(c =>
-              `    ${c.level.padEnd(14)} ${c.name.padEnd(35)} Grade: ${c.grade}${c.apScore ? `  AP: ${c.apScore}` : ''}`
+              `    ${c.level.padEnd(14)} ${c.name.padEnd(35)} S1: ${c.gradeSem1 || '—'}  S2: ${c.gradeSem2 || '—'}${c.apScore ? `  AP: ${c.apScore}` : ''}`
             ).join('\n');
             return `  Grade ${y}:\n${rows}`;
           }).join('\n');

@@ -4,6 +4,7 @@ import { useApp } from '@/context/AppContext';
 import { TopNav } from '@/components/layout/TopNav';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TweaksPanel } from '@/components/tweaks/TweaksPanel';
+import { ChatBot } from '@/components/chat/ChatBot';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { tweaks, loading } = useApp();
@@ -29,6 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </main>
         </div>
         <TweaksPanel />
+        <ChatBot />
       </div>
     );
   }
@@ -42,6 +44,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <TweaksPanel />
+      <ChatBot />
     </div>
   );
 }

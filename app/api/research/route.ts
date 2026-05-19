@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getExaClient } from '@/lib/exa';
-import { getAnthropicClient } from '@/lib/ai';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -13,72 +11,66 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing school or program' }, { status: 400 });
     }
 
-    const exa = getExaClient();
+    if (!process.env.PERPLEXITY_API_KEY) {
+      return NextResponse.json({ error: 'PERPLEXITY_API_KEY not configured' }, { status: 500 });
+    }
 
-    // Fast parallel search: official site + Reddit
-    const [official, reddit] = await Promise.all([
-      exa.searchAndContents(
-        `${school} ${program} admission requirements GPA SAT acceptance rate`,
-        { numResults: 4, text: { maxCharacters: 2000 }, type: 'auto' }
-      ),
-      exa.searchAndContents(
-        `${school} ${program} reddit applicants students honest review`,
-        { numResults: 4, text: { maxCharacters: 2000 }, includeDomains: ['reddit.com'], type: 'auto' }
-      ),
-    ]);
+    const systemPrompt = `You are a college admissions research analyst. Provide accurate, specific, up-to-date information about university programs. Always include real numbers (GPA ranges, SAT ranges, acceptance rates, salary figures) when available. Draw from both official university sources and genuine student community discussions (Reddit, College Confidential, forums).`;
 
-    const officialText = official.results
-      .map(r => `[${r.title}](${r.url})\n${r.text ?? ''}`)
-      .join('\n\n');
-    const redditText = reddit.results
-      .map(r => `[${r.title}](${r.url})\n${r.text ?? ''}`)
-      .join('\n\n');
+    const userPrompt = `Research "${school}" — "${program}" program for a college admissions counselor.
 
-    const allText = `=== OFFICIAL SOURCES ===\n${officialText}\n\n=== REDDIT / COMMUNITY ===\n${redditText}`;
-
-    const anthropic = getAnthropicClient();
-    const mergePrompt = `You are analyzing research about "${school} ${program}" for a college admissions counselor.
-
-Research content:
-${allText.slice(0, 10000)}
-
-Produce a final structured research summary as valid JSON matching this exact schema:
+Return ONLY valid JSON matching this exact schema (no markdown fences, no literal newlines inside string values):
 {
-  "admission_requirements": "string — GPA range, SAT/ACT ranges, class rank, acceptance rate, interview/portfolio requirements. Be specific with numbers.",
-  "program_details": "string — class size, curriculum structure, unique features, research opportunities, honors thesis requirements, notable courses",
-  "career_outcomes": "string — average salaries, top employers, internship rates, graduate school placement rates",
-  "community_insights": "string — honest student perspectives from Reddit and forums, common praises and complaints",
+  "admission_requirements": "string — specific GPA range, SAT/ACT ranges, class rank expectations, acceptance rate for this program, any portfolio or interview requirements",
+  "program_details": "string — class size, curriculum highlights, unique features, research opportunities, co-op/internship integration, notable courses or tracks",
+  "career_outcomes": "string — average starting salaries, top employers who recruit here, internship placement rates, graduate school acceptance rates",
+  "community_insights": "string — honest student perspectives from Reddit and forums: what students love, common complaints, what surprised them, campus culture fit",
   "application_tips": ["string", "string", "string", "string", "string"],
-  "official_vs_community": "string — where official claims differ from community experience, or 'Sources align' if no major discrepancies",
-  "confidence": "High | Medium | Low — based on source quality and data specificity"
+  "official_vs_community": "string — where official claims differ from student experience, or 'Sources align' if consistent",
+  "confidence": "High | Medium | Low"
 }
 
 Rules:
-- Be specific with numbers where available
-- community_insights must reflect actual student opinions, not marketing
-- application_tips must be 5 actionable items specific to this program
-- Output ONLY valid JSON, no markdown fences, no literal newlines inside string values`;
+- Be specific with real numbers where available
+- application_tips must be 5 actionable, program-specific items
+- community_insights must reflect actual student opinions, not marketing language`;
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 3000,
-      messages: [{ role: 'user', content: mergePrompt }],
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'sonar-pro',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        max_tokens: 3000,
+        temperature: 0.2,
+        return_citations: true,
+      }),
     });
 
-    const raw = message.content
-      .filter(b => b.type === 'text')
-      .map(b => (b.type === 'text' ? b.text : ''))
-      .join('');
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Perplexity API error ${response.status}: ${errText}`);
+    }
+
+    const data = await response.json();
+    const raw: string = data.choices?.[0]?.message?.content ?? '';
 
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Claude returned no JSON');
+    if (!jsonMatch) throw new Error('Perplexity returned no JSON');
     const result = JSON.parse(jsonMatch[0]);
 
-    const allResults = [...official.results, ...reddit.results];
-    const sources = allResults.map(r => ({
-      title: r.title || r.url,
-      url: r.url,
-      type: r.url.includes('reddit.com') ? 'reddit' : 'web',
+    // citations come back as an array of URL strings in sonar-pro
+    const citations: string[] = data.citations ?? [];
+    const sources = citations.map((url: string) => ({
+      title: url,
+      url,
+      type: url.includes('reddit.com') ? 'reddit' : 'web',
     }));
 
     return NextResponse.json({

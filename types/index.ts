@@ -2,7 +2,8 @@ export interface Course {
   id: string;
   name: string;
   level: 'AP' | 'IB' | 'Honors' | 'Dual Enrollment' | 'Regular';
-  grade: string;       // letter or numeric: "A", "A-", "95"
+  gradeSem1: string;   // letter or numeric: "A", "A-", "95"
+  gradeSem2: string;
   year: 9 | 10 | 11 | 12;
   apScore?: number;    // 1–5, only for AP courses
 }

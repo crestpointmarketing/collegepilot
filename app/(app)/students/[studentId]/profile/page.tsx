@@ -39,11 +39,20 @@ const blankAward = (): Award => ({
   level: 'School',
 });
 
+const GPA_MAX: Record<Course['level'], number> = {
+  'AP': 5.0,
+  'IB': 5.0,
+  'Dual Enrollment': 5.0,
+  'Honors': 4.5,
+  'Regular': 4.0,
+};
+
 const blankCourse = (): Course => ({
   id: Math.random().toString(36).slice(2),
   name: '',
   level: 'AP',
-  grade: 'A',
+  gradeSem1: '',
+  gradeSem2: '',
   year: 11,
   apScore: 5,
 });
@@ -534,6 +543,7 @@ function CourseRow({ course, onChange, onRemove, inp }: {
   onRemove: () => void;
   inp: string;
 }) {
+  const gpaMax = GPA_MAX[course.level];
   return (
     <div className="bg-[var(--bg-soft)] rounded-lg p-3 border border-[var(--line)] grid grid-cols-12 gap-2 items-end">
       <div className="col-span-1">
@@ -543,7 +553,9 @@ function CourseRow({ course, onChange, onRemove, inp }: {
         </select>
       </div>
       <div className="col-span-2">
-        <label className="block text-[11px] text-[var(--muted)] mb-1">Level</label>
+        <label className="block text-[11px] text-[var(--muted)] mb-1">
+          Level <span className="text-[var(--accent)] font-semibold">/{gpaMax.toFixed(1)}</span>
+        </label>
         <select className={`${inp} text-[12.5px] px-1.5`} value={course.level} onChange={e => {
           const lvl = e.target.value as Course['level'];
           onChange({ ...course, level: lvl, apScore: lvl === 'AP' ? (course.apScore ?? 5) : undefined });
@@ -551,18 +563,22 @@ function CourseRow({ course, onChange, onRemove, inp }: {
           {['AP', 'IB', 'Honors', 'Dual Enrollment', 'Regular'].map(l => <option key={l} value={l}>{l}</option>)}
         </select>
       </div>
-      <div className="col-span-4">
+      <div className="col-span-3">
         <label className="block text-[11px] text-[var(--muted)] mb-1">Course name</label>
         <input className={`${inp} text-[12.5px]`} value={course.name} onChange={e => onChange({ ...course, name: e.target.value })} placeholder="e.g. AP Calculus BC" />
       </div>
       <div className="col-span-2">
-        <label className="block text-[11px] text-[var(--muted)] mb-1">Grade</label>
-        <input className={`${inp} text-[12.5px]`} value={course.grade} onChange={e => onChange({ ...course, grade: e.target.value })} placeholder="A / 95" />
+        <label className="block text-[11px] text-[var(--muted)] mb-1">Sem 1</label>
+        <input className={`${inp} text-[12.5px]`} value={course.gradeSem1} onChange={e => onChange({ ...course, gradeSem1: e.target.value })} placeholder="A / 95" />
       </div>
       <div className="col-span-2">
-        <label className="block text-[11px] text-[var(--muted)] mb-1">AP score</label>
+        <label className="block text-[11px] text-[var(--muted)] mb-1">Sem 2</label>
+        <input className={`${inp} text-[12.5px]`} value={course.gradeSem2} onChange={e => onChange({ ...course, gradeSem2: e.target.value })} placeholder="A / 95" />
+      </div>
+      <div className="col-span-1">
+        <label className="block text-[11px] text-[var(--muted)] mb-1">AP</label>
         <select
-          className={`${inp} text-[12.5px] ${course.level !== 'AP' ? 'opacity-40 bg-[var(--line)] pointer-events-none' : ''}`}
+          className={`${inp} text-[12.5px] px-1 ${course.level !== 'AP' ? 'opacity-40 bg-[var(--line)] pointer-events-none' : ''}`}
           value={course.level === 'AP' ? (course.apScore ?? 5) : ''}
           onChange={e => onChange({ ...course, apScore: e.target.value ? parseInt(e.target.value) : undefined })}
           disabled={course.level !== 'AP'}
