@@ -6,12 +6,12 @@ import { BrandMark } from './BrandMark';
 import { NavLinks } from './NavLinks';
 import { Avatar } from '@/components/shared/Avatar';
 import { useApp } from '@/context/AppContext';
+import { getUserDisplay } from '@/lib/userDisplay';
 
 export function Sidebar() {
   const { user, signOut } = useApp();
   const router = useRouter();
-  const displayName = user?.email?.split('@')[0] ?? 'Counselor';
-  const initials = displayName.slice(0, 2).toUpperCase();
+  const userDisplay = user ? getUserDisplay(user) : null;
 
   const handleSignOut = async () => {
     await signOut();
@@ -28,9 +28,11 @@ export function Sidebar() {
       </div>
       <div className="p-4 border-t border-[var(--line)]">
         <div className="flex items-center justify-between px-3 py-2">
-          <div className="flex items-center gap-2.5">
-            <Avatar name={initials} color="#6366f1" size={30} />
-            <div className="text-[13px] font-medium text-[var(--ink)]">{displayName}</div>
+          <div className="flex min-w-0 items-center gap-2.5" title={userDisplay?.label}>
+            <Avatar name={userDisplay?.initials ?? '?'} color="#6366f1" size={30} />
+            <div className="truncate text-[13px] font-medium text-[var(--ink)]">
+              {userDisplay?.label ?? 'Loading account...'}
+            </div>
           </div>
           <button
             onClick={handleSignOut}

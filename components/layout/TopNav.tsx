@@ -8,6 +8,7 @@ import { BrandMark } from './BrandMark';
 import { SaveIndicator } from '@/components/shared/SaveIndicator';
 import { Avatar } from '@/components/shared/Avatar';
 import { useApp } from '@/context/AppContext';
+import { getUserDisplay } from '@/lib/userDisplay';
 
 const STUDENT_NAV = [
   { id: 'profile',   label: 'Profile',   icon: User },
@@ -24,8 +25,7 @@ export function TopNav() {
   const router = useRouter();
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const displayName = user?.email?.split('@')[0] ?? 'Counselor';
-  const initials = displayName.slice(0, 2).toUpperCase();
+  const userDisplay = user ? getUserDisplay(user) : null;
 
   // Detect student context from URL
   const studentMatch = /\/students\/([^/]+)/.exec(pathname);
@@ -156,9 +156,14 @@ export function TopNav() {
       {/* Right: save indicator + user */}
       <div className="flex items-center gap-2 shrink-0">
         {pathname.includes('/profile') && <SaveIndicator state={saveState} />}
-        <div className="flex items-center gap-2 bg-[var(--bg-soft)] rounded-pill px-2.5 py-1.5">
-          <Avatar name={initials} color="#6366f1" size={22} />
-          <span className="text-[13px] font-medium text-[var(--ink)]">{displayName}</span>
+        <div
+          className="flex items-center gap-2 bg-[var(--bg-soft)] rounded-pill px-2.5 py-1.5 min-w-0"
+          title={userDisplay?.label}
+        >
+          <Avatar name={userDisplay?.initials ?? '?'} color="#6366f1" size={22} />
+          <span className="max-w-[220px] truncate text-[13px] font-medium text-[var(--ink)]">
+            {userDisplay?.label ?? 'Loading account...'}
+          </span>
         </div>
         <button
           onClick={handleSignOut}

@@ -28,8 +28,6 @@ interface AppContextValue {
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
-// Accounts that always receive the full sample-student roster (owner + shared demo/QA login).
-const FULL_SEED_ACCOUNTS = ['vivianxie30@gmail.com', 'demo@gmail.com'];
 
 function stableStringify(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
@@ -44,39 +42,6 @@ function isUnmodifiedSampleStudent(student: Student) {
   const sample = SAMPLE_STUDENTS.find(s => s.id === student.id);
   if (!sample) return false;
   return stableStringify(student) === stableStringify(sample);
-}
-
-// Sample rows may already exist in Supabase when new transcript fields ship.
-// Fill only absent fields so a user's explicit edits (including cleared arrays) win.
-function mergeMissingSampleTranscriptFields(student: Student): Student {
-  const sample = SAMPLE_STUDENTS.find(s => s.id === student.id);
-  if (!sample) return student;
-  const merged = { ...student };
-  if (merged.classRank === undefined && sample.classRank !== undefined) merged.classRank = sample.classRank;
-  if (merged.graduationProgram === undefined && sample.graduationProgram !== undefined) merged.graduationProgram = sample.graduationProgram;
-  if (merged.endorsements === undefined && sample.endorsements !== undefined) merged.endorsements = sample.endorsements;
-  if (merged.stateAssessments === undefined && sample.stateAssessments !== undefined) merged.stateAssessments = sample.stateAssessments;
-  if (merged.performanceAcknowledgements === undefined && sample.performanceAcknowledgements !== undefined) {
-    merged.performanceAcknowledgements = sample.performanceAcknowledgements;
-  }
-  if (sample.transcriptRevision && merged.transcriptRevision !== sample.transcriptRevision && sample.courses) {
-    const existingCourses = merged.courses ?? [];
-    const existingById = new Map(existingCourses.map(course => [course.id, course]));
-    const officialIds = new Set(sample.courses.map(course => course.id));
-    const officialCourses = sample.courses.map(official => {
-      const existing = existingById.get(official.id);
-      if (!existing) return official;
-      return {
-        ...existing,
-        ...official,
-        ...(existing.apScore !== undefined ? { apScore: existing.apScore } : {}),
-      };
-    });
-    const customCourses = existingCourses.filter(course => !officialIds.has(course.id));
-    merged.courses = [...officialCourses, ...customCourses];
-    merged.transcriptRevision = sample.transcriptRevision;
-  }
-  return merged;
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -115,7 +80,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (loadedUserIdRef.current !== currentUser.id) {
           loadedUserIdRef.current = currentUser.id;
           // eslint-disable-next-line react-hooks/immutability
-          await loadUserData(currentUser.id, currentUser.email ?? '');
+          await loadUserData(currentUser.id);
         }
       } else {
         setLoading(false);
@@ -140,7 +105,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setTimeout(() => {
           if (!active) return;
           setUser(signedInUser);
-          void loadUserData(signedInUser.id, signedInUser.email ?? '');
+          void loadUserData(signedInUser.id);
         }, 0);
       }
     });
@@ -152,7 +117,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function loadUserData(userId: string, email?: string) {
+  async function loadUserData(userId: string) {
     setLoading(true);
     setLoadError(null);
     try {
@@ -166,30 +131,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (studentError) throw studentError;
       if (strategyError) throw strategyError;
 
-      let loadedStudents: Student[] = studentRows?.map(r => r.data as Student) ?? [];
-      // Demo/QA and owner accounts always get the complete sample roster.
-      // Only students that are missing get seeded, so edits made in the demo
-      // account are preserved across logins.
-      const isFullSeedAccount = FULL_SEED_ACCOUNTS.includes(email?.toLowerCase() ?? '');
-      if (isFullSeedAccount) {
-        const existingIds = new Set(loadedStudents.map(s => s.id));
-        const missing = SAMPLE_STUDENTS.filter(s => !existingIds.has(s.id));
-        if (missing.length) {
-          const rows = missing.map(s => ({ id: s.id, user_id: userId, data: s, updated_at: new Date().toISOString() }));
-          const { error } = await supabase.from('students').upsert(rows, { onConflict: 'id,user_id' });
-          if (error) throw error;
-          loadedStudents = [...missing, ...loadedStudents];
-        }
-
-        const upgradedStudents = loadedStudents.map(mergeMissingSampleTranscriptFields);
-        const changedStudents = upgradedStudents.filter((student, index) => stableStringify(student) !== stableStringify(loadedStudents[index]));
-        if (changedStudents.length) {
-          const rows = changedStudents.map(student => ({ id: student.id, user_id: userId, data: student, updated_at: new Date().toISOString() }));
-          const { error } = await supabase.from('students').upsert(rows, { onConflict: 'id,user_id' });
-          if (error) throw error;
-          loadedStudents = upgradedStudents;
-        }
-      }
+      const loadedStudents: Student[] = studentRows?.map(r => r.data as Student) ?? [];
 
       setStudents(loadedStudents);
 
