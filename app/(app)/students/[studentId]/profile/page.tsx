@@ -34,6 +34,7 @@ const blankActivity = (): Activity => ({
   timing: 'School Year',
   hours: '',
   weeks: '',
+  period: '',
 });
 
 const blankAward = (): Award => ({
@@ -86,6 +87,7 @@ const blankProject = (): Project => ({
   outcome: '',
   affiliation: '',
   impact: '',
+  period: '',
 });
 
 function Stepper({ currentStep }: { currentStep: number }) {
@@ -856,9 +858,14 @@ function ProjectCard({ project, onChange, onRemove, inp }: {
             {['Research', 'Independent', 'Product', 'Startup'].map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </Field>
+        <Field label="Period" optional>
+          <input className={inp} value={project.period ?? ''} onChange={e => onChange({ ...project, period: e.target.value })} placeholder="e.g. Summer 2026" />
+        </Field>
+        <div className="col-span-2">
         <Field label="Affiliation" optional>
           <input className={inp} value={project.affiliation ?? ''} onChange={e => onChange({ ...project, affiliation: e.target.value })} placeholder="e.g. MIT PRIMES, Independent" />
         </Field>
+        </div>
         <div className="col-span-2">
           <div className="flex items-center justify-between mb-1">
             <label className="block text-[13px] font-medium text-[var(--ink-soft)]">Description</label>
@@ -953,6 +960,11 @@ function ActivityCard({ act, onChange, onRemove, inp }: {
                 onChange={e => onChange({ ...act, desc: e.target.value })}
                 placeholder="What did you do? Quantify impact where possible."
               />
+            </Field>
+          </div>
+          <div className="col-span-2">
+            <Field label="Period" optional>
+              <input className={inp} value={act.period ?? ''} onChange={e => onChange({ ...act, period: e.target.value })} placeholder="e.g. Summer 2025–Present" />
             </Field>
           </div>
           <div className="col-span-2 grid grid-cols-2 gap-3">

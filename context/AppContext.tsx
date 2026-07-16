@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import type { Student, Strategy, Tweaks, School } from '@/types';
-import { SAMPLE_STUDENTS, INITIAL_STRATEGIES, TWEAK_DEFAULTS, ACCENT_PALETTES } from '@/lib/data';
+import { SAMPLE_STUDENTS, INITIAL_STRATEGIES, TWEAK_DEFAULTS, ACCENT_PALETTES, upgradeSampleStudentProfile } from '@/lib/data';
 import { SCHOOLS } from '@/lib/schools';
 import { createClient } from '@/lib/supabase';
 import { strategySchema } from '@/lib/schemas';
@@ -131,7 +131,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (studentError) throw studentError;
       if (strategyError) throw strategyError;
 
-      const loadedStudents: Student[] = studentRows?.map(r => r.data as Student) ?? [];
+      let loadedStudents: Student[] = studentRows?.map(r => r.data as Student) ?? [];
+      const upgradedStudents = loadedStudents.map(upgradeSampleStudentProfile);
+      const changedStudents = upgradedStudents.filter((student, index) => student !== loadedStudents[index]);
+      if (changedStudents.length) {
+        const rows = changedStudents.map(student => ({
+          id: student.id,
+          user_id: userId,
+          data: student,
+          updated_at: new Date().toISOString(),
+        }));
+        const { error } = await supabase.from('students').upsert(rows, { onConflict: 'id,user_id' });
+        if (error) throw error;
+        loadedStudents = upgradedStudents;
+      }
 
       setStudents(loadedStudents);
 

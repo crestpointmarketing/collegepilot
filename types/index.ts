@@ -24,6 +24,7 @@ export interface Project {
   outcome: string;     // "Published paper", "GitHub 2k stars", "Patent filed"
   affiliation?: string; // "MIT PRIMES", "Stanford OHS", "Independent"
   impact?: string;
+  period?: string;
 }
 
 export interface Activity {
@@ -36,6 +37,7 @@ export interface Activity {
   timing: string;
   hours: number | string;
   weeks: number | string;
+  period?: string;
 }
 
 export interface Award {
@@ -96,6 +98,7 @@ export interface Student {
   stateAssessments?: string[];
   performanceAcknowledgements?: string[];
   transcriptRevision?: string;
+  sampleProfileRevision?: string;
   courses?: Course[];
   projects?: Project[];
   // Application context and preferences (optional — never infer sensitive data)

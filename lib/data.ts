@@ -1,6 +1,6 @@
 import type { Student, Strategy, Tweaks } from '@/types';
 
-export const DATA_VERSION = '3';
+export const DATA_VERSION = '4';
 
 export const ACCENT_PALETTES: Record<string, Record<string, string>> = {
   blue:    { accent: '#0570de', 'accent-600': '#0050b8', 'accent-50': '#eff6ff', 'accent-100': '#dbeafe' },
@@ -70,7 +70,7 @@ export const SAMPLE_STUDENTS: Student[] = [
       'SAT total score of at least 1350 acknowledgement',
       'Information Technology Specialist — Java',
     ],
-    strengths: ['AI/ML Systems', 'Competitive Programming', 'Full-Stack Engineering', 'Research & Innovation'],
+    strengths: ['AI/ML Systems', 'Robotics & VLA', 'Competitive Programming', 'Full-Stack/SaaS Engineering', 'Research & Innovation'],
     weak: ['SAT below top-10 median', 'Limited humanities depth', 'No published research paper'],
     citizenship: 'U.S. Citizen',
     schoolType: 'Public',
@@ -79,8 +79,8 @@ export const SAMPLE_STUDENTS: Student[] = [
     targetRange: 'Top 10',
     risk: 'Balanced',
     preferred: 'MIT, Stanford, CMU, Caltech',
-    traits: 'AI Systems Builder with production-scale deployments across speech processing, financial reasoning, and human-AI interaction. Built Whisper→LLM→XTTS speech therapy pipeline achieving 46% fluency improvement. USACO Gold Division. 100+ volunteer service hours.',
-    angles: 'Three deployed AI systems targeting real-world problems; USACO Gold via perfect-score promotion; science fair winner with societal impact framing (pediatric speech therapy accessibility)',
+    traits: 'AI systems builder spanning speech technology, real-time human-AI interaction, financial reasoning, multi-agent marketing operations, production inference infrastructure, and real-world robot manipulation. Built and evaluated end-to-end systems from data collection through deployment.',
+    angles: 'Unusually broad systems depth across software and embodied AI: award-winning speech research, production SaaS and inference work, VLA robot learning with measured generalization results, and USACO Gold competitive programming.',
     color: '#0ea5e9',
     status: 'Draft',
     updated: 'Jul 2026',
@@ -100,23 +100,25 @@ export const SAMPLE_STUDENTS: Student[] = [
         id: 'a2',
         category: 'Internship',
         position: 'Software Engineer Intern',
-        org: 'Eelocutionist',
-        desc: 'Built production AI interview coaching platform with Express.js + LLM evaluation, speech APIs, and multi-format interview engine deployed to live users',
+        org: 'Elocutionist',
+        desc: 'Built live AI interview coaching backend with Express.js, LLM evaluation, speech APIs, multi-format interviews, analytics, scoring, and feedback.',
         grades: [11, 12],
         timing: 'School Year, Summer',
         hours: 10,
         weeks: 36,
+        period: '2025–2026',
       },
       {
         id: 'a3',
         category: 'Research',
         position: 'Independent Developer',
         org: 'Zeitgeist (Independent Project)',
-        desc: 'Built real-time AI system for financial reasoning under uncertainty; integrated Polygon.io options data with LLM interpretation via FastAPI + Docker',
+        desc: 'Built real-time financial reasoning system with Polygon.io options data, LLM analysis, FastAPI, Docker, continuous ingestion, and inference.',
         grades: [11, 12],
         timing: 'School Year, Summer',
         hours: 8,
         weeks: 30,
+        period: '2024–2025',
       },
       {
         id: 'a4',
@@ -150,6 +152,54 @@ export const SAMPLE_STUDENTS: Student[] = [
         timing: 'School Year',
         hours: 3,
         weeks: 36,
+      },
+      {
+        id: 'a7',
+        category: 'Internship',
+        position: 'AI Systems / AI Infrastructure Intern',
+        org: 'OneSource Cloud',
+        desc: 'Benchmarked AI models and deployments; studied GPU utilization, latency, throughput, quantization, and efficient production inference.',
+        grades: [11, 12],
+        timing: 'School Year, Summer',
+        hours: '',
+        weeks: '',
+        period: 'Summer 2025–Present',
+      },
+      {
+        id: 'a8',
+        category: 'Internship',
+        position: 'Backend Developer Intern',
+        org: 'DreamCollege.ai',
+        desc: 'Built AI mock-interview backend: question bank, scheduling, scoring, feedback, and APIs shipped with a remote engineering team.',
+        grades: [11],
+        timing: 'School Break',
+        hours: '',
+        weeks: '',
+        period: 'Summer 2025',
+      },
+      {
+        id: 'a9',
+        category: 'Computer/Technology',
+        position: 'AI Marketing Team — B2B Growth',
+        org: 'PomeloLabs',
+        desc: 'Built multi-agent B2B marketing operations with GEO measurement, closed-loop content workflows, multi-tenant RLS, and Stripe billing.',
+        grades: [12],
+        timing: 'School Year, Summer',
+        hours: '',
+        weeks: '',
+        period: '2026–Present',
+      },
+      {
+        id: 'a10',
+        category: 'Research',
+        position: 'Student Researcher — Robot Manipulation',
+        org: 'UT Dallas STEM Bridge / IRVL',
+        desc: 'Built real-robot VLA pipeline on LeRobot SO-101 arms; collected 75 demos and tested SmolVLA/π0.5 generalization.',
+        grades: [12],
+        timing: 'School Break',
+        hours: '',
+        weeks: '',
+        period: 'Summer 2026',
       },
     ],
     awards: [
@@ -208,6 +258,64 @@ export const SAMPLE_STUDENTS: Student[] = [
         level: 'Regional',
       },
     ],
+    sampleProfileRevision: '2026-07-16-experience-projects',
+    projects: [
+      {
+        id: 'p1',
+        name: 'SpeakWise: AI-Assisted Limited Repair Platform for Children with Language Disorders',
+        field: 'CS / AI / Speech Technology',
+        type: 'Research',
+        description: 'End-to-end pipeline: OpenAI Whisper ASR → Google Gemini 2.0 LLM linguistic repair → XTTS v2 zero-shot voice cloning. Introduced a Repair Intensity Parameter as a tunable fluency-identity tradeoff controller and evaluated the system on 40 pediatric speech samples from the UCLASS corpus.',
+        outcome: '46% fluency improvement with semantic fidelity preserved; 1st Place + Jay Ingram Award at HPHS SciTech Fair; Top 4 / Honorable Mention at DRSEF',
+        affiliation: 'Highland Park High School — Independent Research',
+        impact: 'Low-cost speech-language pathologist augmentation targeting pediatric speech accessibility.',
+      },
+      {
+        id: 'p2',
+        name: 'PomeloLabs — AI Marketing Operations for B2B Growth',
+        field: 'AI Systems / B2B SaaS / Growth Engineering',
+        type: 'Startup',
+        description: 'Built an AI marketing operations system for B2B SMBs with four specialized agents—SEO Lead, Content Writer, Social Manager, and Growth Analyst—sharing brand context. Designed a Context → Observe → Reason → Execute → Govern → Measure loop spanning research, approval, publishing, and continuous improvement. Implemented multi-tenant Supabase RLS, role-based access, audit logs, and publishing to LinkedIn, X, Webflow, and WordPress.',
+        outcome: 'Shipped tiered Starter/Growth/Concierge/Enterprise SaaS plans on Stripe with lint, TypeScript, unit/API/integration, and Playwright E2E coverage.',
+        affiliation: 'PomeloLabs',
+        impact: 'Measures brand visibility across ChatGPT, Claude, Gemini, and Perplexity, then generates content to close GEO visibility gaps.',
+        period: '2026–Present',
+      },
+      {
+        id: 'p3',
+        name: 'Learning Robot Manipulation Using Vision-Language-Action Models',
+        field: 'Robotics / Vision-Language-Action Models',
+        type: 'Research',
+        description: 'Built a full VLA research pipeline on low-cost LeRobot SO-101 leader-follower arms: arm/camera calibration, teleoperated demonstration collection, imitation-learning policy training, and real-robot deployment. Collected 75 demonstrations across a natural tabletop and controlled lightbox, then trained and evaluated SmolVLA and π0.5 policies across 10 VLAReplica benchmark tasks and multiple train/test environment pairings.',
+        outcome: 'Measured up to 100% in-distribution success; single-environment policies dropped to about 20% out of distribution, while merged tabletop + lightbox training recovered 80% success in both environments.',
+        affiliation: 'UT Dallas STEM Bridge — Intelligent Robotics and Vision Lab (IRVL)',
+        impact: 'Demonstrated how diverse training environments improve VLA generalization across lighting and background changes.',
+        period: 'Summer 2026',
+      },
+      {
+        id: 'p4',
+        name: 'Elocutionist — AI Interview Coaching Platform',
+        field: 'Real-Time Human-AI Interaction',
+        type: 'Product',
+        description: 'Built a production AI interview system deployed on a live platform. Developed the backend with Express.js, LLM evaluation, and speech APIs; designed behavioral, technical, and case-based interview formats; and implemented performance analytics with scoring and feedback tracking.',
+        outcome: 'Shipped a scalable real-time coaching workflow supporting live user interactions.',
+        affiliation: 'Elocutionist — Internship Project',
+        impact: 'Turns model output into actionable interview feedback across multiple interview formats.',
+        period: '2025–2026',
+      },
+      {
+        id: 'p5',
+        name: 'Zeitgeist — AI System for Financial Reasoning',
+        field: 'Financial AI / Real-Time Market Analysis',
+        type: 'Independent',
+        description: 'Built a real-time AI system for financial reasoning under uncertainty using options data and market signals. Integrated Polygon.io APIs with LLM-based interpretation of volatility and Greeks, developed a FastAPI + Docker backend for low-latency deployment, and implemented continuous data ingestion and inference for dynamic market conditions.',
+        outcome: 'Delivered structured LLM reasoning over continuously changing financial-market data.',
+        affiliation: 'Independent Project',
+        impact: 'Explores confidence-aware AI reasoning in a structured, uncertainty-heavy financial domain.',
+        period: '2024–2025',
+      },
+    ],
+    whyMajorEvidence: 'Built production AI infrastructure, interview and financial reasoning systems, multi-agent SaaS, award-winning speech technology, and a real-robot VLA research pipeline; these experiences connect computer science theory to measurable real-world system behavior.',
     transcriptRevision: '2026-06-11-final',
     courses: [
       // All 32 credit-bearing rows transcribed from the final Grade-11 Texas AAR printed 06/11/2026.
@@ -404,6 +512,27 @@ export const SAMPLE_STUDENTS: Student[] = [
     awards: [],
   },
 ];
+
+export function upgradeSampleStudentProfile(student: Student): Student {
+  const sample = SAMPLE_STUDENTS.find(candidate => candidate.id === student.id);
+  if (!sample?.sampleProfileRevision || student.sampleProfileRevision === sample.sampleProfileRevision) {
+    return student;
+  }
+
+  return {
+    ...student,
+    sampleProfileRevision: sample.sampleProfileRevision,
+    updated: sample.updated,
+    status: student.status === 'Draft' ? 'Draft' : 'Needs Review',
+    strengths: [...sample.strengths],
+    weak: [...sample.weak],
+    traits: sample.traits,
+    angles: sample.angles,
+    activities: sample.activities.map(activity => ({ ...activity, grades: [...activity.grades] })),
+    projects: sample.projects?.map(project => ({ ...project })),
+    whyMajorEvidence: sample.whyMajorEvidence,
+  };
+}
 
 export const INITIAL_STRATEGIES: Record<string, Strategy> = {
   s1: {
