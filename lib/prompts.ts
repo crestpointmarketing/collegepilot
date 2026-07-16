@@ -1,4 +1,4 @@
-import type { Student } from '@/types';
+import type { CourseYear, Student } from '@/types';
 import { SCHOOLS } from './schools';
 
 // Data sourced from: Common Data Set submissions, USNWR, school admissions offices.
@@ -146,18 +146,19 @@ export function buildStrategyPrompt(student: Student, researchContext?: SchoolRe
   // Courses: group by year, show level + name + grade + AP score
   const coursesSummary = student.courses && student.courses.length > 0
     ? (() => {
-        const byYear: Record<number, typeof student.courses> = {};
+        const byYear = new Map<CourseYear, NonNullable<Student['courses']>>();
         for (const c of student.courses!) {
-          if (!byYear[c.year]) byYear[c.year] = [];
-          byYear[c.year]!.push(c);
+          const rows = byYear.get(c.year) ?? [];
+          rows.push(c);
+          byYear.set(c.year, rows);
         }
-        return [9, 10, 11, 12]
-          .filter(y => byYear[y]?.length)
+        return (['Pre-9', 9, 10, 11, 12] as CourseYear[])
+          .filter(y => byYear.get(y)?.length)
           .map(y => {
-            const rows = byYear[y]!.map(c =>
-              `    ${c.level.padEnd(14)} ${c.name.padEnd(35)} S1: ${c.gradeSem1 || '—'}  S2: ${c.gradeSem2 || '—'}${c.apScore ? `  AP: ${c.apScore}` : ''}`
+            const rows = byYear.get(y)!.map(c =>
+              `    ${c.level.padEnd(14)} ${c.name.padEnd(35)} S1: ${c.gradeSem1 || '—'}  S2: ${c.gradeSem2 || '—'}${c.apScore ? `  AP exam: ${c.apScore}` : ''}${c.credit !== undefined ? `  Credit: ${c.credit.toFixed(2)}` : ''}${c.transcriptCode ? `  Code: ${c.transcriptCode}` : ''}${c.notes ? `  Note: ${c.notes}` : ''}`
             ).join('\n');
-            return `  Grade ${y}:\n${rows}`;
+            return `  ${y === 'Pre-9' ? 'Before Grade 9' : `Grade ${y}`}:\n${rows}`;
           }).join('\n');
       })()
     : null;

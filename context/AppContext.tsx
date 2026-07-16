@@ -59,6 +59,23 @@ function mergeMissingSampleTranscriptFields(student: Student): Student {
   if (merged.performanceAcknowledgements === undefined && sample.performanceAcknowledgements !== undefined) {
     merged.performanceAcknowledgements = sample.performanceAcknowledgements;
   }
+  if (sample.transcriptRevision && merged.transcriptRevision !== sample.transcriptRevision && sample.courses) {
+    const existingCourses = merged.courses ?? [];
+    const existingById = new Map(existingCourses.map(course => [course.id, course]));
+    const officialIds = new Set(sample.courses.map(course => course.id));
+    const officialCourses = sample.courses.map(official => {
+      const existing = existingById.get(official.id);
+      if (!existing) return official;
+      return {
+        ...existing,
+        ...official,
+        ...(existing.apScore !== undefined ? { apScore: existing.apScore } : {}),
+      };
+    });
+    const customCourses = existingCourses.filter(course => !officialIds.has(course.id));
+    merged.courses = [...officialCourses, ...customCourses];
+    merged.transcriptRevision = sample.transcriptRevision;
+  }
   return merged;
 }
 

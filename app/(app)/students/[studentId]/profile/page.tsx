@@ -10,7 +10,7 @@ import { ChipGroup } from '@/components/shared/ChipGroup';
 import { SaveIndicator } from '@/components/shared/SaveIndicator';
 import { COMMON_APP_CATEGORIES } from '@/lib/data';
 import { CHAR_LIMITS } from '@/lib/characterLimits';
-import type { Student, Activity, Award, Course, Project } from '@/types';
+import type { Student, Activity, Award, Course, CourseYear, Project } from '@/types';
 
 type TranscriptSort = 'grade' | 'subject';
 
@@ -71,8 +71,11 @@ const blankCourse = (): Course => ({
   gradeSem1: '',
   gradeSem2: '',
   year: 11,
-  apScore: 5,
 });
+
+function courseYearRank(year: CourseYear) {
+  return year === 'Pre-9' ? 8 : year;
+}
 
 const blankProject = (): Project => ({
   id: Math.random().toString(36).slice(2),
@@ -158,9 +161,9 @@ export default function ProfilePage() {
       if (transcriptSort === 'subject') {
         return subjectRank(a.course.name) - subjectRank(b.course.name)
           || a.course.name.localeCompare(b.course.name)
-          || a.course.year - b.course.year;
+          || courseYearRank(a.course.year) - courseYearRank(b.course.year);
       }
-      return a.course.year - b.course.year
+      return courseYearRank(a.course.year) - courseYearRank(b.course.year)
         || subjectRank(a.course.name) - subjectRank(b.course.name)
         || a.course.name.localeCompare(b.course.name);
     });
@@ -212,6 +215,7 @@ export default function ProfilePage() {
     endorsements: data.endorsements ?? [],
     stateAssessments: data.stateAssessments ?? [],
     performanceAcknowledgements: data.performanceAcknowledgements ?? [],
+    transcriptRevision: data.transcriptRevision,
     courses: data.courses ?? [],
     projects: data.projects ?? [],
     residencyStatus: data.residencyStatus,
@@ -428,7 +432,7 @@ export default function ProfilePage() {
             {/* Transcript / Courses */}
             <div>
               <div className="flex items-center justify-between gap-3 mb-1">
-                <div className="text-[15px] font-semibold text-[var(--ink)]">Courses / Transcript</div>
+                <div className="text-[15px] font-semibold text-[var(--ink)]">Courses / Transcript ({data.courses?.length ?? 0})</div>
                 <div className="flex items-center gap-2">
                   <div className="inline-flex rounded-lg border border-[var(--line-strong)] bg-white p-0.5">
                     {(['grade', 'subject'] as const).map(mode => (
@@ -455,7 +459,7 @@ export default function ProfilePage() {
                   </button>
                 </div>
               </div>
-              <p className="text-[12px] text-[var(--muted)] mb-3">List AP/IB/Honors courses. Helps AI accurately assess academic rigor beyond GPA.</p>
+              <p className="text-[12px] text-[var(--muted)] mb-3">List every credit-bearing course, including courses completed before Grade 9. AP exam scores stay blank unless separately reported.</p>
               {(data.courses ?? []).length === 0 && (
                 <div className="text-[13px] text-[var(--muted)] py-4 text-center border border-dashed border-[var(--line)] rounded-lg">
                   No courses added — optional but improves strategy accuracy
@@ -771,8 +775,11 @@ function CourseRow({ course, onChange, onRemove, inp }: {
     <div className="relative bg-[var(--bg-soft)] rounded-lg p-3 pr-10 border border-[var(--line)] grid grid-cols-12 gap-2 items-end">
       <div className="col-span-2">
         <label className="block text-[11px] text-[var(--muted)] mb-1">Yr</label>
-        <select className={`${inp} text-[12px] px-2`} value={String(course.year ?? 11)} onChange={e => onChange({ ...course, year: parseInt(e.target.value) as 9|10|11|12 })}>
-          {[9, 10, 11, 12].map(y => <option key={y} value={String(y)}>{y}</option>)}
+        <select className={`${inp} text-[12px] px-2`} value={String(course.year ?? 11)} onChange={e => {
+          const value = e.target.value;
+          onChange({ ...course, year: value === 'Pre-9' ? 'Pre-9' : parseInt(value) as CourseYear });
+        }}>
+          {(['Pre-9', 9, 10, 11, 12] as CourseYear[]).map(y => <option key={y} value={String(y)}>{y === 'Pre-9' ? 'Before 9' : y}</option>)}
         </select>
       </div>
       <div className="col-span-2">
@@ -781,7 +788,7 @@ function CourseRow({ course, onChange, onRemove, inp }: {
         </label>
         <select className={`${inp} text-[12px] px-1.5`} value={course.level} onChange={e => {
           const lvl = e.target.value as Course['level'];
-          onChange({ ...course, level: lvl, apScore: lvl === 'AP' ? (course.apScore ?? 5) : undefined });
+          onChange({ ...course, level: lvl, apScore: lvl === 'AP' ? course.apScore : undefined });
         }}>
           {['AP', 'IB', 'Honors', 'Dual Enrollment', 'Regular'].map(l => <option key={l} value={l}>{l}</option>)}
         </select>
@@ -802,7 +809,7 @@ function CourseRow({ course, onChange, onRemove, inp }: {
         <label className="block text-[11px] text-[var(--muted)] mb-1">AP</label>
         <select
           className={`${inp} text-[12px] px-1 ${course.level !== 'AP' ? 'opacity-40 bg-[var(--line)] pointer-events-none' : ''}`}
-          value={course.level === 'AP' ? (course.apScore ?? 5) : ''}
+          value={course.level === 'AP' ? (course.apScore ?? '') : ''}
           onChange={e => onChange({ ...course, apScore: e.target.value ? parseInt(e.target.value) : undefined })}
           disabled={course.level !== 'AP'}
         >
@@ -810,6 +817,15 @@ function CourseRow({ course, onChange, onRemove, inp }: {
           {[5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n}</option>)}
         </select>
       </div>
+      {(course.schoolYear || course.transcriptCode || course.credit !== undefined || course.subjectArea || course.notes) && (
+        <div className="col-span-12 text-[11px] text-[var(--muted)] flex flex-wrap gap-x-3 gap-y-1 pt-1">
+          {course.schoolYear && <span>School year: {course.schoolYear}</span>}
+          {course.transcriptCode && <span>Transcript code: {course.transcriptCode}</span>}
+          {course.credit !== undefined && <span>Credit: {course.credit.toFixed(2)}</span>}
+          {course.subjectArea && <span>Area: {course.subjectArea}</span>}
+          {course.notes && <span>{course.notes}</span>}
+        </div>
+      )}
       <div className="absolute right-2 top-8">
         <button type="button" onClick={onRemove} className="p-1.5 rounded text-[var(--muted-2)] hover:text-red-500 hover:bg-red-50 transition-colors">
           <Trash2 size={14} />

@@ -1,11 +1,18 @@
+export type CourseYear = 'Pre-9' | 9 | 10 | 11 | 12;
+
 export interface Course {
   id: string;
   name: string;
   level: 'AP' | 'IB' | 'Honors' | 'Dual Enrollment' | 'Regular';
   gradeSem1: string;   // letter or numeric: "A", "A-", "95"
   gradeSem2: string;
-  year: 9 | 10 | 11 | 12;
-  apScore?: number;    // 1–5, only for AP courses
+  year: CourseYear;
+  apScore?: number;    // 1–5 AP exam score, not the course grade
+  schoolYear?: string;
+  credit?: number;
+  transcriptCode?: string;
+  subjectArea?: string;
+  notes?: string;
 }
 
 export interface Project {
@@ -88,6 +95,7 @@ export interface Student {
   endorsements?: string[];
   stateAssessments?: string[];
   performanceAcknowledgements?: string[];
+  transcriptRevision?: string;
   courses?: Course[];
   projects?: Project[];
   // Application context and preferences (optional — never infer sensitive data)
