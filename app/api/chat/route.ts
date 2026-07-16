@@ -1,12 +1,25 @@
 import { NextRequest } from 'next/server';
 import { getAnthropicClient } from '@/lib/ai';
+import { createServerSupabaseClient } from '@/lib/supabase.server';
+import { checkRateLimit, rateLimitMessage } from '@/lib/rateLimit';
+import { strategySchema } from '@/lib/schemas';
 import type { Student, Strategy } from '@/types';
+import { z } from 'zod';
 
 export const runtime = 'edge';
 
+const chatRequestSchema = z.object({
+  messages: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string().trim().min(1).max(8000),
+  })).min(1).max(30),
+  studentId: z.string().trim().min(1).max(120),
+  strategy: strategySchema.nullable().optional(),
+});
+
 function buildStudentContext(student: Student): string {
   const activities = student.activities.length
-    ? student.activities.map(a => `  - [${a.category}] ${a.position} @ ${a.org}: ${a.desc} (${a.hours}h/wk)`).join('\n')
+    ? student.activities.map(a => `  - [${a.category}] ${a.position} @ ${a.org}: ${a.desc} (${a.hours}h/wk, Grades ${a.grades.join(',') || 'N/A'}, ${a.timing || 'timing N/A'})`).join('\n')
     : '  None listed';
 
   const awards = student.awards.length
@@ -32,6 +45,40 @@ function buildStudentContext(student: Student): string {
       })()
     : '  None listed';
 
+  const additionalContext = [
+    student.classRank ? `Class rank: ${student.classRank}${student.classSize ? ` / class size ${student.classSize}` : ''}` : student.classSize ? `Class size: ${student.classSize}` : '',
+    student.gpaScale ? `Weighted GPA scale: ${student.gpaScale}` : '',
+    student.apIbOffered ? `AP/IB offered by school: ${student.apIbOffered}` : '',
+    student.satMath || student.satReadingWriting ? `SAT sections: Math ${student.satMath ?? 'N/A'}, Reading & Writing ${student.satReadingWriting ?? 'N/A'}, superscore ${student.satSuperscore ?? 'Unknown'}` : '',
+    student.testOptionalPlan ? `Score plan: ${student.testOptionalPlan}${student.plannedRetake ? `; retake ${student.plannedRetake}` : ''}` : '',
+    student.englishTest ? `English proficiency: ${student.englishTest}` : '',
+    student.graduationProgram ? `Graduation program: ${student.graduationProgram}` : '',
+    student.endorsements?.length ? `Endorsements: ${student.endorsements.join('; ')}` : '',
+    student.seniorCourses ? `Senior courses: ${student.seniorCourses}` : '',
+    student.academicTrend ? `Academic trend/context: ${student.academicTrend}` : '',
+    student.stateAssessments?.length ? `State assessments: ${student.stateAssessments.join('; ')}` : '',
+    student.performanceAcknowledgements?.length ? `Transcript acknowledgements: ${student.performanceAcknowledgements.join('; ')}` : '',
+    student.residencyStatus ? `Residency/visa: ${student.residencyStatus}` : '',
+    student.stateResidency ? `State residency: ${student.stateResidency}` : '',
+    student.needBasedAid ? `Need-based aid: ${student.needBasedAid}` : '',
+    student.meritAidPriority ? `Merit aid priority: ${student.meritAidPriority}` : '',
+    student.annualBudget ? `Annual budget: ${student.annualBudget}` : '',
+    student.parentEducation ? `Parent/guardian education: ${student.parentEducation}` : '',
+    student.familyResponsibilities ? `Family/work responsibilities: ${student.familyResponsibilities}` : '',
+    student.whyMajorEvidence ? `Why-major evidence: ${student.whyMajorEvidence}` : '',
+    student.personalStatementIdeas ? `Personal statement ideas: ${student.personalStatementIdeas}` : '',
+    student.backgroundContext ? `Background context: ${student.backgroundContext}` : '',
+    student.challengesContext ? `Challenges/disruptions: ${student.challengesContext}` : '',
+    student.additionalInformation ? `Additional information plan: ${student.additionalInformation}` : '',
+    student.recommenderPlan ? `Recommendation plan: ${student.recommenderPlan}` : '',
+    student.preferredRegions?.length ? `Preferred regions: ${student.preferredRegions.join(', ')}` : '',
+    student.excludedRegions?.length ? `Excluded regions: ${student.excludedRegions.join(', ')}` : '',
+    student.preferredSettings?.length ? `Preferred settings: ${student.preferredSettings.join(', ')}` : '',
+    student.preferredSchoolSizes?.length ? `Preferred sizes: ${student.preferredSchoolSizes.join(', ')}` : '',
+    student.schoolMustHaves ? `School must-haves: ${student.schoolMustHaves}` : '',
+    student.schoolAvoids ? `School deal-breakers: ${student.schoolAvoids}` : '',
+  ].filter(Boolean).join('\n');
+
   return `STUDENT PROFILE — ${student.name}
 ─────────────────────────────────────────
 Grade: ${student.grade} | School: ${student.school || 'N/A'} (${student.schoolType}) | City: ${student.city || 'N/A'}
@@ -44,6 +91,7 @@ Strengths: ${student.strengths.join(', ') || 'N/A'}
 Weaknesses: ${student.weak.join(', ') || 'None'}
 Angles: ${student.angles || 'Not specified'}
 Notes: ${student.traits || 'Not specified'}
+${additionalContext ? `\nADDITIONAL PROFILE CONTEXT:\n${additionalContext}` : ''}
 
 ACTIVITIES:
 ${activities}
@@ -128,25 +176,82 @@ ${research.map(r => `[${r.school_name} — ${r.program}]
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, student, strategy, researchData }: {
-      messages: { role: 'user' | 'assistant'; content: string }[];
-      student: Student;
-      strategy?: Strategy | null;
-      researchData?: ResearchEntry[];
-    } = await req.json();
-
-    if (!messages?.length || !student) {
-      return new Response('Missing messages or student', { status: 400 });
+    const parsedRequest = chatRequestSchema.safeParse(await req.json());
+    if (!parsedRequest.success) {
+      return new Response('Invalid chat request', { status: 400 });
     }
+    const { messages, studentId, strategy } = parsedRequest.data;
 
     if (!process.env.ANTHROPIC_API_KEY) {
       return new Response('ANTHROPIC_API_KEY not configured', { status: 500 });
     }
 
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return new Response('Not authenticated', { status: 401 });
+    }
+
+    const rl = checkRateLimit(`chat:${user.id}`, 60, 60 * 60 * 1000);
+    if (!rl.ok) {
+      return new Response(rateLimitMessage('Chat', rl), {
+        status: 429,
+        headers: { 'Retry-After': String(rl.retryAfterSeconds) },
+      });
+    }
+
+    const { data: studentRow, error: studentError } = await supabase
+      .from('students')
+      .select('data')
+      .eq('id', studentId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (studentError) return new Response(studentError.message, { status: 500 });
+    if (!studentRow) return new Response('Student not found', { status: 404 });
+
+    const storedStudent = studentRow.data as Student;
+    const { data: strategyRow } = await supabase
+      .from('strategies')
+      .select('data')
+      .eq('student_id', storedStudent.id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    const parsedStoredStrategy = strategySchema.safeParse(strategyRow?.data);
+    const storedStrategy = parsedStoredStrategy.success ? parsedStoredStrategy.data : strategy ?? null;
+    const firstUserMessage = messages.findIndex(message => message.role === 'user');
+    const aiMessages = firstUserMessage >= 0 ? messages.slice(firstUserMessage) : messages;
+
+    const { data: researchRows } = await supabase
+      .from('school_research')
+      .select('school_name, program, data')
+      .eq('user_id', user.id);
+
+    // Scope research to this student's target schools — the table is per-user,
+    // so an unfiltered dump would mix other students' research into the context.
+    const targetNames = [
+      ...(storedStudent.preferred?.split(/[,;]/) ?? []),
+      ...(storedStrategy
+        ? [...storedStrategy.schools.reach, ...storedStrategy.schools.match, ...storedStrategy.schools.safety].map(s => s.name)
+        : []),
+    ].map(n => n.trim().toLowerCase()).filter(Boolean);
+
+    const storedResearch: ResearchEntry[] = (researchRows ?? [])
+      .filter(r => {
+        if (!targetNames.length) return false;
+        const school = r.school_name.toLowerCase();
+        return targetNames.some(t => school.includes(t) || t.includes(school));
+      })
+      .map(r => ({
+        school_name: r.school_name,
+        program: r.program,
+        ...(r.data ?? {}),
+      }));
+
     const sections = [
-      buildStudentContext(student),
-      strategy ? buildStrategyContext(strategy) : null,
-      researchData?.length ? buildResearchContext(researchData) : null,
+      buildStudentContext(storedStudent),
+      storedStrategy ? buildStrategyContext(storedStrategy) : null,
+      storedResearch.length ? buildResearchContext(storedResearch) : null,
     ].filter(Boolean).join('\n\n');
 
     const systemPrompt = `You are an expert U.S. college admissions counselor advising on a specific student. You have their complete profile, any generated application strategy, and school research data below.
@@ -167,7 +272,7 @@ ${sections}`;
             model: 'claude-sonnet-4-6',
             max_tokens: 2048,
             system: systemPrompt,
-            messages,
+            messages: aiMessages,
           });
 
           for await (const event of anthropicStream) {
@@ -180,7 +285,14 @@ ${sections}`;
           }
         } catch (err) {
           console.error('Chat stream error:', err);
-          controller.enqueue(encoder.encode('\n\n[Error: response interrupted]'));
+          const status = (err as { status?: number })?.status;
+          const detail =
+            status === 401
+              ? 'The Anthropic API key is invalid or missing. Update ANTHROPIC_API_KEY in .env.local and restart the server.'
+              : status === 429
+                ? 'The AI service is rate-limited right now. Try again in a moment.'
+                : 'The response was interrupted. Please try again.';
+          controller.enqueue(encoder.encode(`\n\n[AI error: ${detail}]`));
         } finally {
           controller.close();
         }

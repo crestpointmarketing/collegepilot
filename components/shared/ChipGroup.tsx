@@ -13,7 +13,11 @@ export function ChipGroup({ options, value, onChange, multi = true }: ChipGroupP
   const toggle = (opt: string) => {
     if (multi) {
       const next = new Set(selected);
-      next.has(opt) ? next.delete(opt) : next.add(opt);
+      if (next.has(opt)) {
+        next.delete(opt);
+      } else {
+        next.add(opt);
+      }
       onChange(Array.from(next));
     } else {
       onChange(opt);

@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import { Search, X, Plus, CalendarDays, Banknote, GraduationCap, Users, TrendingUp, BookOpen, Lightbulb } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { fitScore, tierFor } from '@/lib/schools';
 import { TierBadge } from '@/components/shared/TierBadge';
 import { FitBar } from '@/components/shared/FitBar';
-import type { School } from '@/types';
+import type { School, SchoolEntry, Strategy } from '@/types';
 
 const ALL_REGIONS = ['West', 'East', 'Midwest', 'South'] as const;
 const ALL_SIZES = ['Small', 'Medium', 'Large'] as const;
@@ -31,13 +32,18 @@ function ChipBtn({ label, active, onClick }: { label: string; active: boolean; o
 }
 
 export default function SchoolsPage() {
-  const { students, schools } = useApp();
-  const activeStudent = students[0] ?? null;
+  const params = useParams();
+  const studentId = params.studentId as string;
+  const { students, schools, strategies, saveStrategy } = useApp();
+  const activeStudent = students.find(s => s.id === studentId) ?? null;
+  const currentStrategy = strategies[studentId] ?? null;
+  const [saveMessage, setSaveMessage] = useState('');
 
+  // Fit scores are only meaningful against the real student's numbers
   const profile = {
-    gpa: activeStudent?.gpa || '3.92',
-    sat: activeStudent?.sat || '1520',
-    major: activeStudent?.major || 'Computer Science',
+    gpa: activeStudent?.gpa ?? '',
+    sat: activeStudent?.sat ?? '',
+    major: activeStudent?.major ?? '',
   };
 
   const [pendingFilters, setPendingFilters] = useState({
@@ -72,7 +78,7 @@ export default function SchoolsPage() {
     if (f.topRanked) list = list.filter(s => s.topRanked);
     if (f.majorQuery) list = list.filter(s => s.majors.some(m => m.toLowerCase().includes(f.majorQuery.toLowerCase())));
     return list;
-  }, [appliedFilters]);
+  }, [appliedFilters, schools]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -82,6 +88,59 @@ export default function SchoolsPage() {
       return 0;
     });
   }, [filtered, sortKey, profile.gpa, profile.sat]);
+
+  const handleAddToStrategy = (ids: Set<string>) => {
+    if (!currentStrategy || !activeStudent || ids.size === 0) return;
+
+    const next: Strategy = {
+      ...currentStrategy,
+      schools: {
+        reach: [...currentStrategy.schools.reach],
+        match: [...currentStrategy.schools.match],
+        safety: [...currentStrategy.schools.safety],
+      },
+    };
+
+    const existing = new Set([
+      ...next.schools.reach,
+      ...next.schools.match,
+      ...next.schools.safety,
+    ].map(s => s.name.toLowerCase()));
+
+    let added = 0;
+    for (const id of ids) {
+      const school = schools.find(s => s.id === id);
+      if (!school || existing.has(school.name.toLowerCase())) continue;
+      const scoreTier = tierFor(school, profile.gpa, profile.sat);
+      // No heuristic percentage here — the AI strategy model is the single
+      // source of calibrated probabilities; regenerating fills this in.
+      const entry: SchoolEntry = {
+        name: school.name,
+        chance: '—',
+        note: `${scoreTier} fit based on ${activeStudent.name}'s GPA/SAT profile and ${school.majors.slice(0, 2).join(', ')} program fit. Regenerate the strategy for a calibrated admit estimate.`,
+      };
+      if (scoreTier === 'Reach') next.schools.reach.push(entry);
+      if (scoreTier === 'Match') next.schools.match.push(entry);
+      if (scoreTier === 'Safety') next.schools.safety.push(entry);
+      existing.add(school.name.toLowerCase());
+      added += 1;
+    }
+
+    if (added === 0) {
+      setSaveMessage('Selected schools are already in the strategy.');
+      return;
+    }
+
+    setSelected(new Set());
+    setSaveMessage('Saving…');
+    void saveStrategy(studentId, next).then(ok => {
+      setSaveMessage(ok
+        ? `${added} school${added === 1 ? '' : 's'} added to strategy.`
+        : 'Failed to save — your changes may not persist. Check your connection and try again.');
+    });
+  };
+
+  if (!activeStudent) return <div className="text-[var(--muted)]">Student not found.</div>;
 
   return (
     <div className="animate-fade-in">
@@ -99,7 +158,9 @@ export default function SchoolsPage() {
           <div className="flex items-center gap-3">
             <span className="text-[13.5px] text-[var(--muted)]">{selected.size} selected</span>
             <button
-              className="flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium"
+              onClick={() => handleAddToStrategy(selected)}
+              disabled={!currentStrategy}
+              className="flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: 'var(--accent)' }}
             >
               <Plus size={14} /> Add to Strategy
@@ -107,6 +168,16 @@ export default function SchoolsPage() {
           </div>
         )}
       </div>
+      {saveMessage && (
+        <div className="mb-4 rounded border border-[var(--line)] bg-white px-4 py-2 text-[13px] text-[var(--ink-soft)] shadow-card">
+          {saveMessage}
+        </div>
+      )}
+      {!currentStrategy && (
+        <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-2 text-[13px] text-amber-800">
+          Generate a strategy before adding schools to the strategy list.
+        </div>
+      )}
 
       <div className="flex gap-6">
         {/* Filter panel */}
@@ -235,7 +306,11 @@ export default function SchoolsPage() {
                       checked={isSelected}
                       onChange={() => {
                         const next = new Set(selected);
-                        next.has(school.id) ? next.delete(school.id) : next.add(school.id);
+                        if (next.has(school.id)) {
+                          next.delete(school.id);
+                        } else {
+                          next.add(school.id);
+                        }
                         setSelected(next);
                       }}
                       className="mt-1 accent-[var(--accent)]"
@@ -292,9 +367,8 @@ export default function SchoolsPage() {
           profile={profile}
           onClose={() => setDrawerSchool(null)}
           onAdd={() => {
-            const next = new Set(selected);
-            next.add(drawerSchool.id);
-            setSelected(next);
+            const next = new Set([drawerSchool.id]);
+            handleAddToStrategy(next);
             setDrawerSchool(null);
           }}
         />
@@ -427,7 +501,7 @@ function SchoolDrawer({ school, profile, onClose, onAdd }: {
           <DrawerSection icon={<Lightbulb size={15} />} title="Fit Analysis">
             <div className="flex flex-col gap-2">
               <div className="p-3.5 rounded-card bg-[var(--accent-50)] border border-[var(--accent-100,#e0e7ff)]">
-                <div className="text-[11px] font-semibold text-[var(--accent)] mb-1">Why it's a fit</div>
+                <div className="text-[11px] font-semibold text-[var(--accent)] mb-1">Why it&apos;s a fit</div>
                 <p className="text-[12.5px] text-[var(--ink-soft)] leading-relaxed">{school.why}</p>
               </div>
               <div className="p-3.5 rounded-card bg-[var(--accent-50)] border border-[var(--accent-100,#e0e7ff)]">

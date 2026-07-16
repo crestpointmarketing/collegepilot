@@ -72,8 +72,44 @@ export interface Student {
   // Extended academic profile (optional — improves strategy accuracy)
   gpaUnweighted?: string;
   schoolAvgSat?: number;
+  classRank?: string;
+  classSize?: number;
+  gpaScale?: number;
+  apIbOffered?: number;
+  satMath?: number;
+  satReadingWriting?: number;
+  satSuperscore?: 'Yes' | 'No' | 'Unknown';
+  testOptionalPlan?: 'Submit Scores' | 'Test Optional' | 'Undecided';
+  plannedRetake?: string;
+  englishTest?: string;
+  seniorCourses?: string;
+  academicTrend?: string;
+  graduationProgram?: string;
+  endorsements?: string[];
+  stateAssessments?: string[];
+  performanceAcknowledgements?: string[];
   courses?: Course[];
   projects?: Project[];
+  // Application context and preferences (optional — never infer sensitive data)
+  residencyStatus?: string;
+  stateResidency?: string;
+  needBasedAid?: 'Yes' | 'No' | 'Unsure';
+  meritAidPriority?: 'High' | 'Medium' | 'Low';
+  annualBudget?: string;
+  parentEducation?: string;
+  familyResponsibilities?: string;
+  personalStatementIdeas?: string;
+  backgroundContext?: string;
+  challengesContext?: string;
+  additionalInformation?: string;
+  whyMajorEvidence?: string;
+  recommenderPlan?: string;
+  preferredRegions?: string[];
+  excludedRegions?: string[];
+  preferredSettings?: string[];
+  preferredSchoolSizes?: string[];
+  schoolMustHaves?: string;
+  schoolAvoids?: string;
 }
 
 export interface SchoolEntry {

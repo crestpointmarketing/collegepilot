@@ -20,6 +20,7 @@ import {
 } from 'recharts';
 import { useApp } from '@/context/AppContext';
 import { LOADING_STEPS } from '@/lib/data';
+import { strategySchema } from '@/lib/schemas';
 import type { Strategy } from '@/types';
 
 /* ── Types ────────────────────────────────────────────────── */
@@ -146,10 +147,10 @@ function ProbabilityGauge({ value, adjusted }: { value: string; adjusted?: numbe
 /* ── Interactive Lever Card ───────────────────────────────── */
 
 function LeverCard({
-  lever, parsed, state, index,
+  parsed, state, index,
   onChange,
 }: {
-  lever: string; parsed: ParsedLever; state?: LeverState; index: number;
+  parsed: ParsedLever; state?: LeverState; index: number;
   onChange: (i: number, st: LeverState | null) => void;
 }) {
   const active = state?.active ?? false;
@@ -158,19 +159,25 @@ function LeverCard({
   return (
     <div className={`rounded-lg border transition-all ${active ? 'border-[var(--accent)] bg-white shadow-sm' : 'border-[var(--line)] bg-[var(--bg-soft)]'}`}>
       {/* Header row */}
-      <div className="flex items-start gap-2.5 p-3">
+      <div className="flex items-center gap-3 px-3 py-2.5">
         <button
           onClick={() => onChange(index, active ? null : { active: true, strength: 1 })}
-          className={`w-5 h-5 rounded shrink-0 flex items-center justify-center mt-0.5 transition-colors ${active ? 'text-white' : 'border border-[var(--line-strong)] hover:border-[var(--accent)]'}`}
+          aria-label={active ? 'Remove this improvement from the simulation' : 'Apply this improvement to the simulation'}
+          className={`h-7 rounded-md shrink-0 inline-flex items-center gap-1.5 px-2.5 text-[11px] font-semibold transition-colors ${
+            active
+              ? 'text-white'
+              : 'border border-[var(--line-strong)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
+          }`}
           style={active ? { background: 'var(--accent)' } : {}}
         >
-          {active ? <Check size={11} strokeWidth={3} /> : <Plus size={11} className="text-[var(--muted)]" />}
+          {active ? <Check size={11} strokeWidth={3} /> : <Plus size={11} />}
+          {active ? 'Applied' : 'Apply'}
         </button>
-        <div className="flex-1 min-w-0">
-          <div className={`text-[12.5px] font-semibold leading-snug ${active ? 'text-[var(--ink)]' : 'text-[var(--ink-soft)]'}`}>
+        <div className="flex-1 min-w-0 flex items-center gap-3">
+          <div className={`text-[12.5px] font-semibold leading-snug truncate ${active ? 'text-[var(--ink)]' : 'text-[var(--ink-soft)]'}`}>
             {parsed.action}
           </div>
-          <div className="flex items-center gap-1.5 mt-1">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${active ? 'bg-[var(--accent-50)] text-[var(--accent)]' : 'bg-[var(--line)] text-[var(--muted)]'}`}>
               +{parsed.ppMin}–{parsed.ppMax}pp
             </span>
@@ -226,11 +233,11 @@ function SchoolChart({ schools, adjustments }: { schools: Strategy['schools']; a
   const truncate = (name: string, max = 26) =>
     name.length > max ? name.slice(0, max - 1) + '…' : name;
 
-  const CustomTick = ({ x, y, payload }: { x?: number; y?: number; payload?: { value: string } }) => (
+  const renderTick = ({ x, y, payload }: { x?: string | number; y?: string | number; payload?: { value?: string | number } }) => (
     <g transform={`translate(${x},${y})`}>
       <title>{payload?.value}</title>
       <text x={-6} y={0} dy={4} textAnchor="end" fontSize={11.5} fill="#334155">
-        {truncate(payload?.value ?? '')}
+        {truncate(String(payload?.value ?? ''))}
       </text>
     </g>
   );
@@ -255,7 +262,7 @@ function SchoolChart({ schools, adjustments }: { schools: Strategy['schools']; a
           <XAxis type="number" domain={[0, 100]} tickFormatter={v => `${v}%`}
             tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
           <YAxis type="category" dataKey="name" width={170}
-            tick={<CustomTick />} axisLine={false} tickLine={false} />
+            tick={renderTick} axisLine={false} tickLine={false} />
           <Tooltip cursor={{ fill: '#f8fafc' }}
             formatter={(_v, _n, item) => {
               const d = item.payload;
@@ -411,7 +418,7 @@ export default function StrategyPage() {
       const res = await fetch('/api/strategy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ student, forceRegenerate }),
+        body: JSON.stringify({ studentId: student.id, forceRegenerate }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -427,8 +434,22 @@ export default function StrategyPage() {
         fullText += decoder.decode(value, { stream: true });
       }
       const jsonMatch = fullText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('Invalid response from server');
-      saveStrategy(studentId, JSON.parse(repairJson(jsonMatch[0])));
+      if (!jsonMatch) {
+        throw new Error(`Invalid response from server${fullText.trim() ? `: ${fullText.trim().slice(0, 240)}` : ''}`);
+      }
+      const rawStrategy: unknown = JSON.parse(repairJson(jsonMatch[0]));
+      if (rawStrategy && typeof rawStrategy === 'object' && 'error' in rawStrategy) {
+        throw new Error(String(rawStrategy.error));
+      }
+      const parsed = strategySchema.safeParse(rawStrategy);
+      if (!parsed.success) {
+        const fields = parsed.error.issues.slice(0, 3).map(issue => issue.path.join('.')).filter(Boolean).join(', ');
+        throw new Error(`The AI returned an incomplete strategy${fields ? ` (invalid fields: ${fields})` : ''}. Please regenerate.`);
+      }
+      const savedOk = await saveStrategy(studentId, parsed.data);
+      if (!savedOk) {
+        setGenError('The strategy was generated and is shown below, but saving it failed — it may disappear on refresh. Check your connection and regenerate to retry.');
+      }
     } catch (e) {
       console.warn('Strategy generation failed', e);
       setGenError(e instanceof Error ? e.message : 'Unknown error');
@@ -437,9 +458,9 @@ export default function StrategyPage() {
     }
   };
 
-  const handleApprove = () => {
-    markDocumentReady(studentId);
-    router.push(`/students/${studentId}/documents`);
+  const handleApprove = async () => {
+    const ok = await markDocumentReady(studentId);
+    if (ok) router.push(`/students/${studentId}/documents`);
   };
 
   if (!student) return <div className="text-[var(--muted)]">Student not found.</div>;
@@ -537,21 +558,29 @@ export default function StrategyPage() {
                 <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--accent)] mb-1">
                   <BarChart3 size={11} /> Portfolio Analysis
                 </div>
-                <p className="text-[12.5px] text-[var(--ink-soft)] leading-relaxed">{strategy.meta.assessment}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {splitAnalysisText(strategy.meta.assessment).slice(0, 4).map((item, i) => (
+                    <div key={i} className="rounded-md bg-white/60 border border-[var(--accent-100)] px-3 py-2">
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)] mb-1">
+                        {i === 0 ? 'Portfolio Read' : `Point ${i + 1}`}
+                      </div>
+                      <p className="text-[12.5px] text-[var(--ink-soft)] leading-relaxed">{item}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Interactive levers */}
               {parsedLevers.length > 0 && (
                 <div className="border-t border-[var(--accent-100)] pt-3">
                   <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--accent)] mb-2">
-                    <Zap size={11} /> Simulate Improvements — toggle to see impact on school probabilities
+                    <Zap size={11} /> Simulate Improvements — apply items to preview probability changes
                   </div>
                   <div className="flex flex-col gap-2">
                     {parsedLevers.map((parsed, i) => (
                       <LeverCard
                         key={i}
                         index={i}
-                        lever={strategy.meta!.improvement_levers[i]}
                         parsed={parsed}
                         state={leverStates[i]}
                         onChange={handleLeverChange}
@@ -793,7 +822,15 @@ function ExecutionTimeline({ plan }: { plan: Array<{ month: string; tasks: strin
   const [openSet, setOpenSet] = useState<Set<number>>(() => new Set([0]));
 
   const toggle = (i: number) =>
-    setOpenSet(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n; });
+    setOpenSet(prev => {
+      const n = new Set(prev);
+      if (n.has(i)) {
+        n.delete(i);
+      } else {
+        n.add(i);
+      }
+      return n;
+    });
 
   return (
     <div className="relative pl-2">
@@ -882,6 +919,23 @@ function PageHead({ title, sub, actions }: { title: string; sub: string; actions
   );
 }
 
+function cleanStrategyText(text: string): string {
+  return text
+    .replace(/\\n/g, '\n')
+    .replace(/\s+/g, ' ')
+    .replace(/\*\*/g, '')
+    .trim();
+}
+
+function splitAnalysisText(text: string): string[] {
+  const cleaned = cleanStrategyText(text);
+  if (!cleaned) return [];
+  return cleaned
+    .split(/(?<=[.!?])\s+(?=(?:[A-Z0-9]|Risk\s+\d+|[([]\d+))|;\s+(?=(?:[A-Z0-9]|Risk\s+\d+))/g)
+    .map(part => part.trim())
+    .filter(Boolean);
+}
+
 function AnalysisBlock({ icon, label, color, text }: { icon: React.ReactNode; label: string; color: string; text: string }) {
   const bg: Record<string, string> = {
     violet: 'bg-violet-50 border-violet-100',
@@ -895,12 +949,38 @@ function AnalysisBlock({ icon, label, color, text }: { icon: React.ReactNode; la
     emerald: 'text-emerald-700',
     amber: 'text-amber-700',
   };
+  const parts = splitAnalysisText(text);
+  const headline = parts[0] ?? 'No analysis returned.';
+  const details = parts.slice(1, 7);
+  const isRisk = color === 'amber';
+  const detailLabel = isRisk ? 'Watch Items' : 'Evidence';
+
   return (
     <div className={`rounded-lg border p-4 ${bg[color] ?? 'bg-[var(--bg-soft)] border-[var(--line)]'}`}>
-      <div className={`flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-widest mb-2 ${labelColor[color] ?? 'text-[var(--muted)]'}`}>
+      <div className={`flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-widest mb-3 ${labelColor[color] ?? 'text-[var(--muted)]'}`}>
         {icon}{label}
       </div>
-      <p className="text-[13px] text-[var(--ink-soft)] leading-relaxed">{text}</p>
+      <div className="rounded-md bg-white/70 border border-white/80 px-3 py-2.5 mb-3">
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)] mb-1">
+          Main Read
+        </div>
+        <p className="text-[13.5px] font-semibold text-[var(--ink)] leading-relaxed">{headline}</p>
+      </div>
+      {details.length > 0 && (
+        <div>
+          <div className={`text-[10px] font-semibold uppercase tracking-wide mb-2 ${labelColor[color] ?? 'text-[var(--muted)]'}`}>
+            {detailLabel}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {details.map((item, i) => (
+              <div key={i} className="flex items-start gap-2 rounded-md bg-white/60 border border-white/70 px-3 py-2">
+                <span className={`mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 ${isRisk ? 'bg-amber-500' : 'bg-[var(--accent)]'}`} />
+                <p className="text-[12.5px] text-[var(--ink-soft)] leading-relaxed">{item}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

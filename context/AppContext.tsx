@@ -6,48 +6,87 @@ import type { Student, Strategy, Tweaks, School } from '@/types';
 import { SAMPLE_STUDENTS, INITIAL_STRATEGIES, TWEAK_DEFAULTS, ACCENT_PALETTES } from '@/lib/data';
 import { SCHOOLS } from '@/lib/schools';
 import { createClient } from '@/lib/supabase';
+import { strategySchema } from '@/lib/schemas';
 
 interface AppContextValue {
   students: Student[];
   schools: School[];
   strategies: Record<string, Strategy>;
   tweaks: Tweaks;
-  saveState: 'idle' | 'saving' | 'saved';
+  saveState: 'idle' | 'saving' | 'saved' | 'error';
   loading: boolean;
+  loadError: string | null;
   user: User | null;
   setTweak: <K extends keyof Tweaks>(key: K, value: Tweaks[K]) => void;
-  saveStudent: (data: Student) => void;
-  deleteStudent: (studentId: string) => void;
-  saveStrategy: (studentId: string, strategy: Strategy) => void;
-  markDocumentReady: (studentId: string) => void;
-  triggerSave: () => void;
+  saveStudent: (data: Student) => Promise<boolean>;
+  saveStudentDraft: (data: Student) => Promise<boolean>;
+  seedSampleStudents: () => Promise<void>;
+  deleteStudent: (studentId: string) => Promise<boolean>;
+  saveStrategy: (studentId: string, strategy: Strategy) => Promise<boolean>;
+  markDocumentReady: (studentId: string) => Promise<boolean>;
   signOut: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
+// Accounts that always receive the full sample-student roster (owner + shared demo/QA login).
+const FULL_SEED_ACCOUNTS = ['vivianxie30@gmail.com', 'demo@gmail.com'];
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const object = value as Record<string, unknown>;
+    return `{${Object.keys(object).sort().map(key => `${JSON.stringify(key)}:${stableStringify(object[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'undefined';
+}
+
+function isUnmodifiedSampleStudent(student: Student) {
+  const sample = SAMPLE_STUDENTS.find(s => s.id === student.id);
+  if (!sample) return false;
+  return stableStringify(student) === stableStringify(sample);
+}
+
+// Sample rows may already exist in Supabase when new transcript fields ship.
+// Fill only absent fields so a user's explicit edits (including cleared arrays) win.
+function mergeMissingSampleTranscriptFields(student: Student): Student {
+  const sample = SAMPLE_STUDENTS.find(s => s.id === student.id);
+  if (!sample) return student;
+  const merged = { ...student };
+  if (merged.classRank === undefined && sample.classRank !== undefined) merged.classRank = sample.classRank;
+  if (merged.graduationProgram === undefined && sample.graduationProgram !== undefined) merged.graduationProgram = sample.graduationProgram;
+  if (merged.endorsements === undefined && sample.endorsements !== undefined) merged.endorsements = sample.endorsements;
+  if (merged.stateAssessments === undefined && sample.stateAssessments !== undefined) merged.stateAssessments = sample.stateAssessments;
+  if (merged.performanceAcknowledgements === undefined && sample.performanceAcknowledgements !== undefined) {
+    merged.performanceAcknowledgements = sample.performanceAcknowledgements;
+  }
+  return merged;
+}
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   const [user, setUser] = useState<User | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
-  const [schools, setSchools] = useState<School[]>(SCHOOLS);
-  const [strategies, setStrategies] = useState<Record<string, Strategy>>(INITIAL_STRATEGIES);
-  const [tweaks, setTweaks] = useState<Tweaks>(TWEAK_DEFAULTS);
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const [loading, setLoading] = useState(true);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Load tweaks from localStorage on mount (UI preferences stay local)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+  const [schools] = useState<School[]>(SCHOOLS);
+  const [strategies, setStrategies] = useState<Record<string, Strategy>>({});
+  const [tweaks, setTweaks] = useState<Tweaks>(() => {
+    if (typeof window === 'undefined') return TWEAK_DEFAULTS;
     try {
       const saved = localStorage.getItem('ase:tweaks');
-      if (saved) setTweaks(prev => ({ ...prev, ...JSON.parse(saved) }));
-    } catch { /* ignore */ }
-  }, []);
+      return saved ? { ...TWEAK_DEFAULTS, ...JSON.parse(saved) } : TWEAK_DEFAULTS;
+    } catch {
+      return TWEAK_DEFAULTS;
+    }
+  });
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Tracks which user's data has been loaded, so getUser() and onAuthStateChange
+  // (which both fire on mount) don't each trigger a load, and token refreshes don't re-load.
+  const loadedUserIdRef = useRef<string | null>(null);
 
-  // Auth: check session immediately on mount, then watch for sign-out
+  // Auth: check session immediately on mount, then watch for sign-in and sign-out
   useEffect(() => {
     let active = true;
 
@@ -56,21 +95,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!active) return;
       setUser(currentUser ?? null);
       if (currentUser) {
-        await loadUserData(currentUser.id);
+        if (loadedUserIdRef.current !== currentUser.id) {
+          loadedUserIdRef.current = currentUser.id;
+          // eslint-disable-next-line react-hooks/immutability
+          await loadUserData(currentUser.id, currentUser.email ?? '');
+        }
       } else {
         setLoading(false);
       }
     }).catch(() => { if (active) setLoading(false); });
 
-    // Secondary — only used to detect sign-out after initial load
+    // Secondary — handles sign-in after mount (the provider lives in the root layout,
+    // so it mounts on the landing page before any session exists) and sign-out.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
       if (!session?.user) {
+        loadedUserIdRef.current = null;
         setUser(null);
         setStudents([]);
-        setSchools(SCHOOLS);
-        setStrategies(INITIAL_STRATEGIES);
+        setStrategies({});
         setLoading(false);
+      } else if (loadedUserIdRef.current !== session.user.id) {
+        loadedUserIdRef.current = session.user.id;
+        const signedInUser = session.user;
+        // Defer Supabase calls out of the auth callback (supabase-js can deadlock
+        // if queries run synchronously inside onAuthStateChange).
+        setTimeout(() => {
+          if (!active) return;
+          setUser(signedInUser);
+          void loadUserData(signedInUser.id, signedInUser.email ?? '');
+        }, 0);
       }
     });
 
@@ -81,41 +135,74 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function loadUserData(userId: string) {
+  async function loadUserData(userId: string, email?: string) {
     setLoading(true);
+    setLoadError(null);
     try {
-      const [{ data: studentRows }, { data: strategyRows }, { data: schoolRows, count: schoolCount }] = await Promise.all([
+      const [studentResult, strategyResult] = await Promise.all([
         supabase.from('students').select('data').eq('user_id', userId),
         supabase.from('strategies').select('student_id, data').eq('user_id', userId),
-        supabase.from('schools').select('data', { count: 'exact' }),
       ]);
+      const { data: studentRows, error: studentError } = studentResult;
+      const { data: strategyRows, error: strategyError } = strategyResult;
 
-      // Seed schools on first use (global data, same for everyone)
-      if (!schoolCount || schoolCount === 0) {
-        const rows = SCHOOLS.map(s => ({ id: s.id, data: s }));
-        await supabase.from('schools').insert(rows);
-        setSchools(SCHOOLS);
-      } else {
-        const loaded = schoolRows?.map(r => r.data as School) ?? SCHOOLS;
-        setSchools(loaded);
+      if (studentError) throw studentError;
+      if (strategyError) throw strategyError;
+
+      let loadedStudents: Student[] = studentRows?.map(r => r.data as Student) ?? [];
+      // Demo/QA and owner accounts always get the complete sample roster.
+      // Only students that are missing get seeded, so edits made in the demo
+      // account are preserved across logins.
+      const isFullSeedAccount = FULL_SEED_ACCOUNTS.includes(email?.toLowerCase() ?? '');
+      if (isFullSeedAccount) {
+        const existingIds = new Set(loadedStudents.map(s => s.id));
+        const missing = SAMPLE_STUDENTS.filter(s => !existingIds.has(s.id));
+        if (missing.length) {
+          const rows = missing.map(s => ({ id: s.id, user_id: userId, data: s, updated_at: new Date().toISOString() }));
+          const { error } = await supabase.from('students').upsert(rows, { onConflict: 'id,user_id' });
+          if (error) throw error;
+          loadedStudents = [...missing, ...loadedStudents];
+        }
+
+        const upgradedStudents = loadedStudents.map(mergeMissingSampleTranscriptFields);
+        const changedStudents = upgradedStudents.filter((student, index) => stableStringify(student) !== stableStringify(loadedStudents[index]));
+        if (changedStudents.length) {
+          const rows = changedStudents.map(student => ({ id: student.id, user_id: userId, data: student, updated_at: new Date().toISOString() }));
+          const { error } = await supabase.from('students').upsert(rows, { onConflict: 'id,user_id' });
+          if (error) throw error;
+          loadedStudents = upgradedStudents;
+        }
       }
 
-      const loadedStudents: Student[] = studentRows?.map(r => r.data as Student) ?? [];
+      setStudents(loadedStudents);
 
-      if (loadedStudents.length === 0) {
-        // First login — seed sample students so the workspace isn't empty
-        const rows = SAMPLE_STUDENTS.map(s => ({ id: s.id, user_id: userId, data: s }));
-        const { error } = await supabase.from('students').upsert(rows, { onConflict: 'id,user_id' });
-        if (!error) setStudents(SAMPLE_STUDENTS);
-      } else {
-        setStudents(loadedStudents);
-      }
-
-      const loadedStrategies: Record<string, Strategy> = { ...INITIAL_STRATEGIES };
-      strategyRows?.forEach(r => { loadedStrategies[r.student_id] = r.data as Strategy; });
+      const loadedStrategies: Record<string, Strategy> = {};
+      const effectiveStudents = loadedStudents;
+      effectiveStudents.forEach(student => {
+        if (isUnmodifiedSampleStudent(student) && INITIAL_STRATEGIES[student.id]) {
+          loadedStrategies[student.id] = INITIAL_STRATEGIES[student.id];
+        }
+      });
+      strategyRows?.forEach(r => {
+        const student = effectiveStudents.find(s => s.id === r.student_id);
+        const isStaleInitialStrategy =
+          student &&
+          !isUnmodifiedSampleStudent(student) &&
+          INITIAL_STRATEGIES[r.student_id] &&
+          JSON.stringify(r.data) === JSON.stringify(INITIAL_STRATEGIES[r.student_id]);
+        if (student?.status === 'Strategy Generated' || student?.status === 'Document Ready') {
+          const parsed = strategySchema.safeParse(r.data);
+          if (!isStaleInitialStrategy && parsed.success) {
+            loadedStrategies[r.student_id] = parsed.data;
+          } else if (!parsed.success) {
+            console.warn(`Ignoring invalid stored strategy for ${r.student_id}:`, parsed.error.issues);
+          }
+        }
+      });
       setStrategies(loadedStrategies);
     } catch (err) {
       console.error('Failed to load workspace data:', err);
+      setLoadError(err instanceof Error ? err.message : 'Failed to load workspace data.');
     } finally {
       setLoading(false);
     }
@@ -137,17 +224,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTweaks(prev => ({ ...prev, [key]: value }));
   };
 
-  const triggerSave = () => {
-    setSaveState('saving');
+  // Reflects the real outcome of the last write — 'error' persists until the next attempt.
+  const finishSave = (ok: boolean) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      setSaveState('saved');
-      setTimeout(() => setSaveState('idle'), 1800);
-    }, 600);
+    setSaveState(ok ? 'saved' : 'error');
+    if (ok) saveTimerRef.current = setTimeout(() => setSaveState('idle'), 1800);
   };
 
-  const saveStudent = (data: Student) => {
-    if (!user) return;
+  const persistStudent = async (data: Student, invalidateStrategy: boolean): Promise<boolean> => {
+    if (!user) {
+      setSaveState('error');
+      return false;
+    }
     const id = data.id || `s${Date.now()}`;
     const palette = ['#6366f1', '#ec4899', '#0891b2', '#7c3aed', '#059669', '#d97706'];
     const updated: Student = {
@@ -157,70 +245,155 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updated: 'Just now',
       status: data.status || 'Draft',
     };
+    setSaveState('saving');
     setStudents(prev => {
       const exists = prev.find(s => s.id === id);
       return exists ? prev.map(s => s.id === id ? { ...s, ...updated } : s) : [updated, ...prev];
     });
-    triggerSave();
-    supabase.from('students')
-      .upsert({ id, user_id: user.id, data: updated, updated_at: new Date().toISOString() }, { onConflict: 'id,user_id' })
-      .then(({ error }) => { if (error) console.error('saveStudent error:', error); });
+    if (invalidateStrategy) {
+      setStrategies(prev => {
+        if (!prev[id]) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
+    const { error } = await supabase.from('students')
+      .upsert({ id, user_id: user.id, data: updated, updated_at: new Date().toISOString() }, { onConflict: 'id,user_id' });
+    if (error) console.error('saveStudent error:', error);
+    let ok = !error;
+    if (ok && invalidateStrategy) {
+      const { error: strategyError } = await supabase.from('strategies')
+        .delete().eq('student_id', id).eq('user_id', user.id);
+      if (strategyError) {
+        console.error('invalidateStrategy error:', strategyError);
+        ok = false;
+      }
+    }
+    finishSave(ok);
+    return ok;
   };
 
-  const deleteStudent = (studentId: string) => {
-    if (!user) return;
+  // Full save: profile changed in a way that makes any generated strategy stale.
+  const saveStudent = (data: Student) => persistStudent(data, true);
+
+  // Draft autosave: persist edits without discarding an existing strategy.
+  const saveStudentDraft = (data: Student) => persistStudent(data, false);
+
+  const seedSampleStudents = async () => {
+    if (!user) {
+      setLoadError('Your session has expired. Refresh the page and sign in again.');
+      return;
+    }
+    setLoadError(null);
+    setSaveState('saving');
+    const rows = SAMPLE_STUDENTS.map(s => ({ id: s.id, user_id: user.id, data: s }));
+    const { error } = await supabase.from('students').upsert(rows, { onConflict: 'id,user_id' });
+    if (error) {
+      console.error('seedSampleStudents error:', error);
+      setLoadError(error.message);
+      setSaveState('idle');
+      return;
+    }
+    setStudents(prev => {
+      const existingIds = new Set(prev.map(student => student.id));
+      return [...SAMPLE_STUDENTS.filter(student => !existingIds.has(student.id)), ...prev];
+    });
+    setSaveState('saved');
+    setTimeout(() => setSaveState('idle'), 1800);
+  };
+
+  const deleteStudent = async (studentId: string): Promise<boolean> => {
+    if (!user) {
+      setSaveState('error');
+      return false;
+    }
+    setSaveState('saving');
+    const { error } = await supabase.from('students').delete().eq('id', studentId).eq('user_id', user.id);
+    if (error) {
+      console.error('deleteStudent error:', error);
+      finishSave(false);
+      return false;
+    }
+    // Deployed schemas use ON DELETE CASCADE. Keep this cleanup for older installations.
+    const { error: strategyError } = await supabase.from('strategies')
+      .delete().eq('student_id', studentId).eq('user_id', user.id);
+    if (strategyError) console.warn('deleteStrategy cleanup error:', strategyError);
     setStudents(prev => prev.filter(s => s.id !== studentId));
     setStrategies(prev => { const next = { ...prev }; delete next[studentId]; return next; });
-    supabase.from('students').delete().eq('id', studentId).eq('user_id', user.id)
-      .then(({ error }) => { if (error) console.error('deleteStudent error:', error); });
-    supabase.from('strategies').delete().eq('student_id', studentId).eq('user_id', user.id)
-      .then(({ error }) => { if (error) console.error('deleteStrategy error:', error); });
+    finishSave(true);
+    return true;
   };
 
-  const saveStrategy = (studentId: string, strategy: Strategy) => {
-    if (!user) return;
+  const saveStrategy = async (studentId: string, strategy: Strategy): Promise<boolean> => {
+    if (!user) {
+      setSaveState('error');
+      return false;
+    }
+    const parsedStrategy = strategySchema.safeParse(strategy);
+    if (!parsedStrategy.success) {
+      console.error('Refusing to save invalid strategy:', parsedStrategy.error.issues);
+      setSaveState('error');
+      return false;
+    }
+    strategy = parsedStrategy.data;
     const currentStudent = students.find(s => s.id === studentId);
+    setSaveState('saving');
     setStrategies(prev => ({ ...prev, [studentId]: strategy }));
     setStudents(prev => prev.map(s =>
       s.id === studentId ? { ...s, status: 'Strategy Generated', updated: 'Just now' } : s
     ));
-    supabase.from('strategies')
-      .upsert({ student_id: studentId, user_id: user.id, data: strategy }, { onConflict: 'student_id,user_id' })
-      .then(({ error }) => { if (error) console.error('saveStrategy error:', error); });
+    const writes: Promise<{ error: unknown }>[] = [
+      Promise.resolve(supabase.from('strategies')
+        .upsert({ student_id: studentId, user_id: user.id, data: strategy }, { onConflict: 'student_id,user_id' })),
+    ];
     if (currentStudent) {
       const updatedStudent = { ...currentStudent, status: 'Strategy Generated' as const, updated: 'Just now' };
-      supabase.from('students')
-        .upsert({ id: studentId, user_id: user.id, data: updatedStudent, updated_at: new Date().toISOString() }, { onConflict: 'id,user_id' })
-        .then(({ error }) => { if (error) console.error('student status sync error:', error); });
+      writes.push(Promise.resolve(supabase.from('students')
+        .upsert({ id: studentId, user_id: user.id, data: updatedStudent, updated_at: new Date().toISOString() }, { onConflict: 'id,user_id' })));
     }
+    const results = await Promise.all(writes);
+    const ok = results.every(r => !r.error);
+    results.forEach(r => { if (r.error) console.error('saveStrategy error:', r.error); });
+    finishSave(ok);
+    return ok;
   };
 
-  const markDocumentReady = (studentId: string) => {
-    if (!user) return;
-    const currentStudent = students.find(s => s.id === studentId);
-    setStudents(prev => prev.map(s =>
-      s.id === studentId ? { ...s, status: 'Document Ready', updated: 'Just now' } : s
-    ));
-    triggerSave();
-    if (currentStudent) {
-      const updatedStudent = { ...currentStudent, status: 'Document Ready' as const, updated: 'Just now' };
-      supabase.from('students')
-        .upsert({ id: studentId, user_id: user.id, data: updatedStudent, updated_at: new Date().toISOString() }, { onConflict: 'id,user_id' })
-        .then(({ error }) => { if (error) console.error('markDocumentReady error:', error); });
+  const markDocumentReady = async (studentId: string): Promise<boolean> => {
+    if (!user) {
+      setSaveState('error');
+      return false;
     }
+    const currentStudent = students.find(s => s.id === studentId);
+    if (!currentStudent) {
+      setSaveState('error');
+      return false;
+    }
+    setSaveState('saving');
+    const updatedStudent = { ...currentStudent, status: 'Document Ready' as const, updated: 'Just now' };
+    const { error } = await supabase.from('students')
+      .upsert({ id: studentId, user_id: user.id, data: updatedStudent, updated_at: new Date().toISOString() }, { onConflict: 'id,user_id' });
+    if (error) {
+      console.error('markDocumentReady error:', error);
+      finishSave(false);
+      return false;
+    }
+    setStudents(prev => prev.map(s => s.id === studentId ? updatedStudent : s));
+    finishSave(true);
+    return true;
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setStudents([]);
-    setStrategies(INITIAL_STRATEGIES);
+    setStrategies({});
   };
 
   return (
     <AppContext.Provider value={{
-      students, schools, strategies, tweaks, saveState, loading, user,
-      setTweak, saveStudent, deleteStudent, saveStrategy, markDocumentReady, triggerSave, signOut,
+      students, schools, strategies, tweaks, saveState, loading, loadError, user,
+      setTweak, saveStudent, saveStudentDraft, seedSampleStudents, deleteStudent, saveStrategy, markDocumentReady, signOut,
     }}>
       {children}
     </AppContext.Provider>

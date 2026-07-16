@@ -132,7 +132,7 @@ export function buildStrategyPrompt(student: Student, researchContext?: SchoolRe
   const activitiesSummary = student.activities.length
     ? student.activities
         .slice(0, 10)
-        .map((a, i) => `  ${i + 1}. [${a.category}] ${a.position} at ${a.org} — ${a.desc} (${a.hours}h/wk, ${a.weeks}wk/yr, Grades ${a.grades.join(',')})`)
+        .map((a, i) => `  ${i + 1}. [${a.category}] ${a.position} at ${a.org} — ${a.desc} (${a.hours}h/wk, ${a.weeks}wk/yr, Grades ${a.grades.join(',') || 'not specified'}, ${a.timing || 'timing not specified'})`)
         .join('\n')
     : '  None listed';
 
@@ -194,6 +194,40 @@ export function buildStrategyPrompt(student: Student, researchContext?: SchoolRe
     ? `- School avg SAT: ${student.schoolAvgSat} (student is ${satNum > student.schoolAvgSat ? '+' : ''}${satNum - student.schoolAvgSat} vs school mean — use for context score adjustment)`
     : '';
 
+  const extendedProfile = [
+    student.classRank ? `- Class rank: ${student.classRank}${student.classSize ? ` | Class size: ${student.classSize}` : ''}` : student.classSize ? `- Class size: ${student.classSize}` : '',
+    student.gpaScale ? `- Weighted GPA scale: ${student.gpaScale}` : '',
+    student.apIbOffered ? `- AP/IB courses offered by school: ${student.apIbOffered}` : '',
+    student.satMath || student.satReadingWriting ? `- SAT sections: Math ${student.satMath ?? 'N/A'} | Reading & Writing ${student.satReadingWriting ?? 'N/A'} | Superscore: ${student.satSuperscore ?? 'Unknown'}` : '',
+    student.testOptionalPlan ? `- Score submission plan: ${student.testOptionalPlan}${student.plannedRetake ? ` | Planned retake: ${student.plannedRetake}` : ''}` : student.plannedRetake ? `- Planned retake: ${student.plannedRetake}` : '',
+    student.englishTest ? `- English proficiency: ${student.englishTest}` : '',
+    student.graduationProgram ? `- Graduation program: ${student.graduationProgram}` : '',
+    student.endorsements?.length ? `- Endorsements: ${student.endorsements.join('; ')}` : '',
+    student.seniorCourses ? `- Senior-year course plan: ${student.seniorCourses}` : '',
+    student.academicTrend ? `- Academic trend/context: ${student.academicTrend}` : '',
+    student.stateAssessments?.length ? `- State assessments: ${student.stateAssessments.join('; ')}` : '',
+    student.performanceAcknowledgements?.length ? `- Transcript acknowledgements/certifications: ${student.performanceAcknowledgements.join('; ')}` : '',
+    student.residencyStatus ? `- Residency/visa status: ${student.residencyStatus}` : '',
+    student.stateResidency ? `- State residency: ${student.stateResidency}` : '',
+    student.needBasedAid ? `- Need-based aid: ${student.needBasedAid}` : '',
+    student.meritAidPriority ? `- Merit aid priority: ${student.meritAidPriority}` : '',
+    student.annualBudget ? `- Annual family budget: ${student.annualBudget}` : '',
+    student.parentEducation ? `- Parent/guardian education: ${student.parentEducation}` : '',
+    student.familyResponsibilities ? `- Family/work responsibilities: ${student.familyResponsibilities}` : '',
+    student.whyMajorEvidence ? `- Why-major evidence: ${student.whyMajorEvidence}` : '',
+    student.personalStatementIdeas ? `- Personal statement ideas: ${student.personalStatementIdeas}` : '',
+    student.backgroundContext ? `- Background context: ${student.backgroundContext}` : '',
+    student.challengesContext ? `- Challenges/disruptions: ${student.challengesContext}` : '',
+    student.additionalInformation ? `- Additional information plan: ${student.additionalInformation}` : '',
+    student.recommenderPlan ? `- Recommendation plan: ${student.recommenderPlan}` : '',
+    student.preferredRegions?.length ? `- Preferred regions: ${student.preferredRegions.join(', ')}` : '',
+    student.excludedRegions?.length ? `- Excluded regions: ${student.excludedRegions.join(', ')}` : '',
+    student.preferredSettings?.length ? `- Preferred settings: ${student.preferredSettings.join(', ')}` : '',
+    student.preferredSchoolSizes?.length ? `- Preferred school sizes: ${student.preferredSchoolSizes.join(', ')}` : '',
+    student.schoolMustHaves ? `- School must-haves: ${student.schoolMustHaves}` : '',
+    student.schoolAvoids ? `- School deal-breakers: ${student.schoolAvoids}` : '',
+  ].filter(Boolean).join('\n');
+
   return `Run your full 8-step analysis on this student. Then output ONLY valid JSON — no prose, no markdown fences outside the JSON.
 
 SCHOOL REFERENCE DATABASE — you MUST anchor every P% estimate to these real statistics:
@@ -222,6 +256,7 @@ STUDENT PROFILE:
 - Academic strengths: ${student.strengths.join(', ') || 'Not specified'}
 - Known weaknesses: ${student.weak.join(', ') || 'None specified'}
 ${schoolContextNote}
+${extendedProfile}
 ${coursesSummary ? `\nTranscript (course-level detail):\n${coursesSummary}` : ''}
 Activities:
 ${activitiesSummary}

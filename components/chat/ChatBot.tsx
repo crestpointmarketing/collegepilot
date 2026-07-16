@@ -18,6 +18,22 @@ interface ResearchEntry {
   [key: string]: unknown;
 }
 
+// Only research about this student's target schools belongs in their chat
+// context — a per-user dump would leak other students' research in.
+function relevantResearch(rows: ResearchEntry[], student: Student | null, strategy: Strategy | null): ResearchEntry[] {
+  const names: string[] = [];
+  if (student?.preferred) names.push(...student.preferred.split(/[,;]/));
+  if (strategy) {
+    names.push(...[...strategy.schools.reach, ...strategy.schools.match, ...strategy.schools.safety].map(s => s.name));
+  }
+  const targets = names.map(n => n.trim().toLowerCase()).filter(Boolean);
+  if (!targets.length) return [];
+  return rows.filter(r => {
+    const school = r.school_name.toLowerCase();
+    return targets.some(t => school.includes(t) || t.includes(school));
+  });
+}
+
 function MessageBubble({ msg, isStreaming }: { msg: Message; isStreaming: boolean }) {
   const isUser = msg.role === 'user';
 
@@ -87,6 +103,7 @@ export function ChatBot() {
   // Auto-select student from URL
   useEffect(() => {
     if (urlStudentId && urlStudentId !== selectedId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedId(urlStudentId);
       setMessages([]);
       setResearchData([]);
@@ -111,16 +128,19 @@ export function ChatBot() {
         .eq('user_id', user.id)
         .then(({ data: rows }) => {
           if (rows?.length) {
-            setResearchData(rows.map(r => ({ school_name: r.school_name, program: r.program, ...r.data })));
+            const all = rows.map(r => ({ school_name: r.school_name, program: r.program, ...r.data }));
+            setResearchData(relevantResearch(all, student, strategy));
           }
         });
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, selectedId]);
 
   // Welcome message when student is selected and chat opens
   useEffect(() => {
     if (!open) return;
     if (!student) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMessages([{
         role: 'assistant',
         content: 'Hi! Select a student above to get personalized admissions advice.',
@@ -183,9 +203,8 @@ export function ChatBot() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: history.map(m => ({ role: m.role, content: m.content })),
-          student,
+          studentId: student.id,
           strategy: strategy ?? null,
-          researchData: researchData.length ? researchData : undefined,
         }),
       });
 

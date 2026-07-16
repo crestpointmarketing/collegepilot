@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Check, Eye, EyeOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
@@ -11,10 +11,20 @@ export default function HomePage() {
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+
+  // Surface OAuth / callback failures redirected back from /auth/callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'auth_callback_failed') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setError('Sign-in could not be completed. Please try again.');
+    }
+  }, []);
 
   const handleGoogleSignIn = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -35,18 +45,23 @@ export default function HomePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setMessage('');
     setLoading(true);
     try {
       if (mode === 'signin') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
         });
         if (error) throw error;
+        if (!signUpData.session) {
+          setMessage('Account created. Check your email to confirm your address, then sign in.');
+          return;
+        }
       }
       router.push('/dashboard');
       router.refresh();
@@ -57,6 +72,23 @@ export default function HomePage() {
     }
   };
 
+  const handlePasswordReset = async () => {
+    setError('');
+    setMessage('');
+    if (!email.trim()) {
+      setError('Enter your email address first.');
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+    });
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setMessage('Password reset email sent.');
+  };
+
   return (
     <div className="min-h-screen bg-[var(--bg-soft)]">
       {/* Top nav */}
@@ -64,7 +96,13 @@ export default function HomePage() {
         <BrandMark />
         <nav className="flex-1 flex justify-center items-center gap-1">
           {['Product', 'Pricing', 'For Counselors', 'Contact'].map(link => (
-            <button key={link} className="px-3 py-1.5 text-[13.5px] text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors">
+            <button
+              key={link}
+              type="button"
+              disabled
+              title={`${link} page is coming soon`}
+              className="px-3 py-1.5 text-[13.5px] text-[var(--muted)] cursor-not-allowed"
+            >
               {link}
             </button>
           ))}
@@ -133,7 +171,12 @@ export default function HomePage() {
               >
                 Get started <ArrowRight size={14} />
               </button>
-              <button className="px-5 py-2.5 rounded border border-[var(--line-strong)] text-[14px] font-medium text-[var(--ink)] bg-white hover:bg-[var(--bg-soft)] transition-colors shadow-card">
+              <button
+                type="button"
+                disabled
+                title="Demo is coming soon"
+                className="px-5 py-2.5 rounded border border-[var(--line-strong)] text-[14px] font-medium text-[var(--muted)] bg-white shadow-card opacity-60 cursor-not-allowed"
+              >
                 View demo
               </button>
             </div>
@@ -167,7 +210,7 @@ export default function HomePage() {
                 <div className="flex items-center justify-between">
                   <label className="text-[12.5px] font-medium text-[var(--ink-soft)]">Password</label>
                   {mode === 'signin' && (
-                    <button type="button" className="text-[12.5px] font-medium" style={{ color: 'var(--accent)' }}>
+                    <button type="button" onClick={handlePasswordReset} className="text-[12.5px] font-medium" style={{ color: 'var(--accent)' }}>
                       Forgot password?
                     </button>
                   )}
@@ -196,6 +239,11 @@ export default function HomePage() {
               {error && (
                 <div className="text-[12.5px] text-red-700 bg-[var(--red-50)] px-3 py-2.5 rounded-lg">
                   {error}
+                </div>
+              )}
+              {message && (
+                <div className="text-[12.5px] text-emerald-700 bg-emerald-50 px-3 py-2.5 rounded-lg">
+                  {message}
                 </div>
               )}
 
@@ -249,7 +297,7 @@ export default function HomePage() {
             Trusted by leading admissions firms
           </div>
           <p className="text-[22px] font-medium text-[var(--ink)] mb-5">
-            "The first tool that actually thinks like a strategist."
+            &quot;The first tool that actually thinks like a strategist.&quot;
           </p>
           <div className="flex items-center justify-center gap-10 flex-wrap">
             {['Crimson Education', 'Ivy Coach', 'Top Tier', 'Applerouth', 'College Advisor'].map(firm => (
@@ -265,7 +313,15 @@ export default function HomePage() {
         <span className="text-[12.5px] text-[var(--muted)]">© 2026 CollegePilot</span>
         <div className="flex items-center gap-4">
           {['Privacy', 'Terms', 'Security', 'Contact'].map(link => (
-            <button key={link} className="text-[12.5px] text-[var(--muted)] hover:text-[var(--ink-soft)]">{link}</button>
+            <button
+              key={link}
+              type="button"
+              disabled
+              title={`${link} page is coming soon`}
+              className="text-[12.5px] text-[var(--muted)] cursor-not-allowed"
+            >
+              {link}
+            </button>
           ))}
         </div>
       </footer>

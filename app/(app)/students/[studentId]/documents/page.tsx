@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowRight, FileText, Printer } from 'lucide-react';
+import { ArrowRight, Printer } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { CHAR_LIMITS } from '@/lib/characterLimits';
+import type { Activity, Award, Strategy, Student } from '@/types';
 
 export default function DocumentsPage() {
   const params = useParams();
@@ -111,7 +112,7 @@ function DocP({ children }: { children: React.ReactNode }) {
   return <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-3">{children}</p>;
 }
 
-function StrategyDoc({ student, strategy }: { student: any; strategy: any }) {
+function StrategyDoc({ student, strategy }: { student: Student; strategy: Strategy | null }) {
   return (
     <div className="max-w-2xl">
       <DocH1>Admissions Strategy</DocH1>
@@ -135,12 +136,12 @@ function StrategyDoc({ student, strategy }: { student: any; strategy: any }) {
           <DocP><strong>Narrative.</strong> {strategy.strategy.narrative}</DocP>
 
           <DocH2>School List</DocH2>
-          <DocP><strong>Reach.</strong> {strategy.schools.reach.map((s: any) => `${s.name} (${s.chance})`).join(', ')}</DocP>
-          <DocP><strong>Match.</strong> {strategy.schools.match.map((s: any) => `${s.name} (${s.chance})`).join(', ')}</DocP>
-          <DocP><strong>Safety.</strong> {strategy.schools.safety.map((s: any) => `${s.name} (${s.chance})`).join(', ')}</DocP>
+          <DocP><strong>Reach.</strong> {strategy.schools.reach.map(s => `${s.name} (${s.chance})`).join(', ')}</DocP>
+          <DocP><strong>Match.</strong> {strategy.schools.match.map(s => `${s.name} (${s.chance})`).join(', ')}</DocP>
+          <DocP><strong>Safety.</strong> {strategy.schools.safety.map(s => `${s.name} (${s.chance})`).join(', ')}</DocP>
 
           <DocH2>Execution Plan</DocH2>
-          {strategy.plan.map((row: any, i: number) => (
+          {strategy.plan.map((row, i) => (
             <DocP key={i}><strong>{row.month}.</strong> {row.tasks}</DocP>
           ))}
         </>
@@ -149,7 +150,7 @@ function StrategyDoc({ student, strategy }: { student: any; strategy: any }) {
   );
 }
 
-function CommonAppDoc({ student, acts, awards }: { student: any; acts: any[]; awards: any[] }) {
+function CommonAppDoc({ student, acts, awards }: { student: Student; acts: Activity[]; awards: Award[] }) {
   return (
     <div className="max-w-2xl">
       <DocH1>Common App — Activities & Honors</DocH1>
@@ -157,7 +158,7 @@ function CommonAppDoc({ student, acts, awards }: { student: any; acts: any[]; aw
 
       <DocH2>Activities ({acts.length}/10)</DocH2>
       {acts.length === 0 && <DocP>No activities entered yet.</DocP>}
-      {acts.map((a: any, i: number) => (
+      {acts.map((a, i) => (
         <div key={a.id ?? i} className="mb-5 pb-5 border-b border-[var(--line)] last:border-0">
           <div className="flex items-center justify-between mb-1">
             <div className="text-[14px] font-semibold text-[var(--ink)]">
@@ -180,7 +181,7 @@ function CommonAppDoc({ student, acts, awards }: { student: any; acts: any[]; aw
 
       <DocH2>Honors & Awards ({awards.length}/5)</DocH2>
       {awards.length === 0 && <DocP>No awards entered yet.</DocP>}
-      {awards.map((aw: any, i: number) => (
+      {awards.map((aw, i) => (
         <div key={aw.id ?? i} className="flex items-center justify-between py-2 border-b border-[var(--line)] last:border-0">
           <div className="text-[13.5px] text-[var(--ink)]">{aw.title}</div>
           <div className="text-[12px] text-[var(--muted)] shrink-0 ml-4">{aw.level} · Grade {aw.grade}</div>

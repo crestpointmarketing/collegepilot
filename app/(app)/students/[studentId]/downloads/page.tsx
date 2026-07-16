@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { Download, FileText, FileSpreadsheet, File, Printer } from 'lucide-react';
+import { Download, FileSpreadsheet, File, Printer } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 
 function downloadText(filename: string, content: string) {
@@ -45,14 +45,14 @@ export default function DownloadsPage() {
     if (!strategy) return;
     const rows: string[][] = [
       ['Category', 'School', 'Admit Probability', 'Notes'],
-      ...strategy.schools.reach.map((s: { name: string; chance: string; rationale?: string }) => ['Reach', s.name, s.chance, s.rationale ?? '']),
-      ...strategy.schools.match.map((s: { name: string; chance: string; rationale?: string }) => ['Match', s.name, s.chance, s.rationale ?? '']),
-      ...strategy.schools.safety.map((s: { name: string; chance: string; rationale?: string }) => ['Safety', s.name, s.chance, s.rationale ?? '']),
+      ...strategy.schools.reach.map((s: { name: string; chance: string; note?: string }) => ['Reach', s.name, s.chance, s.note ?? '']),
+      ...strategy.schools.match.map((s: { name: string; chance: string; note?: string }) => ['Match', s.name, s.chance, s.note ?? '']),
+      ...strategy.schools.safety.map((s: { name: string; chance: string; note?: string }) => ['Safety', s.name, s.chance, s.note ?? '']),
     ];
     downloadCSV(`${student.name.replace(/\s+/g, '_')}_school_list.csv`, rows);
   };
 
-  const handleDocx = () => {
+  const handleTxt = () => {
     const acts = (student.activities ?? []).slice(0, 10);
     const awards = (student.awards ?? []).slice(0, 5);
 
@@ -108,7 +108,7 @@ export default function DownloadsPage() {
       format: 'TXT',
       size: `${(student.activities ?? []).slice(0, 10).length} activities`,
       enabled: (student.activities?.length ?? 0) > 0,
-      onDownload: handleDocx,
+      onDownload: handleTxt,
     },
   ];
 
@@ -162,7 +162,7 @@ export default function DownloadsPage() {
         </div>
         <button
           disabled={!hasStrategy}
-          onClick={() => { handleCSV(); handleDocx(); }}
+          onClick={() => { handleCSV(); handleTxt(); }}
           className="flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ background: 'var(--accent)' }}
         >

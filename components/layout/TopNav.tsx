@@ -114,15 +114,18 @@ export function TopNav() {
             )}
           </div>
 
-          {/* Student nav */}
-          <nav className="flex items-center gap-0.5 flex-1">
+          {/* Student nav — scrolls horizontally when the header is too narrow */}
+          <nav
+            className="flex items-center gap-0.5 flex-1 min-w-0 overflow-x-auto"
+            style={{ scrollbarWidth: 'none' }}
+          >
             {STUDENT_NAV.map(item => {
               const active = activeTab === item.id;
               return (
                 <Link
                   key={item.id}
                   href={`/students/${currentStudentId}/${item.id}`}
-                  className={`px-3 py-1.5 rounded text-[13px] font-medium transition-all ${
+                  className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded text-[13px] font-medium transition-all ${
                     active
                       ? 'bg-[var(--bg-soft)] text-[var(--ink)]'
                       : 'text-[var(--ink-soft)] hover:bg-[var(--bg-soft)] hover:text-[var(--ink)]'

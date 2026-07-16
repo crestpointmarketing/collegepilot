@@ -10,9 +10,10 @@ import { Avatar } from '@/components/shared/Avatar';
 import type { Student } from '@/types';
 
 export default function DashboardPage() {
-  const { students } = useApp();
+  const { students, loadError, seedSampleStudents, saveState } = useApp();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [seeding, setSeeding] = useState(false);
 
   const filtered = students.filter(s => {
     if (statusFilter !== 'All' && s.status !== statusFilter) return false;
@@ -31,6 +32,12 @@ export default function DashboardPage() {
 
   const statusOptions = ['All', 'Draft', 'Strategy Generated', 'Document Ready', 'Needs Review'];
 
+  const handleSeedSamples = async () => {
+    setSeeding(true);
+    await seedSampleStudents();
+    setSeeding(false);
+  };
+
   return (
     <div className="animate-fade-in">
       {/* Page header */}
@@ -40,7 +47,12 @@ export default function DashboardPage() {
           <p className="text-[var(--muted)] mt-1">Manage applicant strategies and Common App–ready outputs.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 px-3.5 py-2 rounded border border-[var(--line-strong)] text-[var(--ink)] text-[13.5px] font-medium bg-white hover:bg-[var(--bg-soft)] transition-colors shadow-card">
+          <button
+            type="button"
+            disabled
+            title="Templates are coming soon"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded border border-[var(--line-strong)] text-[var(--muted)] text-[13.5px] font-medium bg-white shadow-card opacity-60 cursor-not-allowed"
+          >
             <FileText size={14} />
             Templates
           </button>
@@ -80,14 +92,29 @@ export default function DashboardPage() {
             <Search size={20} style={{ color: 'var(--accent)' }} />
           </div>
           <h3 className="text-[16px] font-semibold text-[var(--ink)] mb-2">No students yet</h3>
-          <p className="text-[var(--muted)] mb-6">Create your first student profile to begin building a strategy.</p>
-          <Link
-            href="/students/new/profile"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium"
-            style={{ background: 'var(--accent)' }}
-          >
-            <Plus size={14} /> Create Your First Student
-          </Link>
+          <p className="text-[var(--muted)] mb-6">Create your first student profile or load the sample students.</p>
+          {loadError && (
+            <div className="max-w-xl mx-auto mb-5 rounded border border-red-200 bg-red-50 px-4 py-3 text-left text-[13px] text-red-700">
+              Supabase could not load student data: {loadError}
+            </div>
+          )}
+          <div className="flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={handleSeedSamples}
+              disabled={seeding || saveState === 'saving'}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded border border-[var(--line-strong)] bg-white text-[var(--ink)] text-[13.5px] font-medium hover:bg-[var(--bg-soft)] disabled:opacity-60"
+            >
+              <FileText size={14} /> {seeding || saveState === 'saving' ? 'Loading samples...' : 'Load Sample Students'}
+            </button>
+            <Link
+              href="/students/new/profile"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium"
+              style={{ background: 'var(--accent)' }}
+            >
+              <Plus size={14} /> Create Your First Student
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-card shadow-card overflow-hidden">
@@ -164,7 +191,7 @@ function StudentRow({ student }: { student: Student }) {
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirming) {
-      deleteStudent(student.id);
+      void deleteStudent(student.id);
     } else {
       setConfirming(true);
       setTimeout(() => setConfirming(false), 3000);
