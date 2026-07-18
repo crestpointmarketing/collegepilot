@@ -30,7 +30,7 @@ import type { DimensionAssessment, ProfileAssessment } from './assessment';
  * Stamped on every result. Bump ENGINE_VERSION whenever a rule changes —
  * identical inputs must be explainable across policy/data updates.
  */
-export const ENGINE_VERSION = '2.1.0';
+export const ENGINE_VERSION = '2.2.0'; // 2.2.0: round-aware ed_commitment rule
 export const DATA_CYCLE = '2025-26';
 
 /*
