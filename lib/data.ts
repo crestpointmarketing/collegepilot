@@ -212,6 +212,12 @@ export const SAMPLE_STUDENTS: Student[] = [
         level: 'National',
       },
       {
+        id: 'w10',
+        title: 'UT Dallas STEM Bridge — VLA Research Project, 3rd Place (award certificate)',
+        grade: 12,
+        level: 'University Program',
+      },
+      {
         id: 'w2',
         title: 'HPHS SciTech Fair — 1st Place & Jay Ingram Award (SpeakWise)',
         grade: 11,
@@ -260,9 +266,9 @@ export const SAMPLE_STUDENTS: Student[] = [
         level: 'Regional',
       },
     ],
-    sampleProfileRevision: '2026-07-18-vla-six-week-program',
+    sampleProfileRevision: '2026-07-18-vla-award-certificates',
     seniorCourses: 'Multivariable Calculus (planned); continued CS/AI systems coursework',
-    additionalInformation: 'Certifications: Full-Stack Web Development Certificate (UT Austin); CS50 Introduction to Computer Science (Harvard); Introduction to Java, Grade A (Johns Hopkins CTY); Prompt Engineering Bootcamp (Udemy). Portfolio site with per-project write-ups and demo videos at ethanli.ai.',
+    additionalInformation: 'Certifications: Full-Stack Web Development Certificate (UT Austin); CS50 Introduction to Computer Science (Harvard); Introduction to Java, Grade A (Johns Hopkins CTY); Prompt Engineering Bootcamp (Udemy). UT Dallas STEM Bridge: program completion certificate and 3rd-place project award certificate; research poster and recorded results presentation available. Portfolio site with per-project write-ups and demo videos at ethanli.ai.',
     projects: [
       {
         id: 'p1',
@@ -297,12 +303,12 @@ export const SAMPLE_STUDENTS: Student[] = [
         field: 'Robotics / Vision-Language-Action Models',
         type: 'Research',
         description: 'Built a full VLA research pipeline on low-cost LeRobot SO-101 leader-follower arms: arm/camera calibration, teleoperated demonstration collection, imitation-learning policy training, and real-robot deployment. Collected 75 demonstrations across a natural tabletop and controlled lightbox, then trained and evaluated SmolVLA and π0.5 policies across 10 VLAReplica benchmark tasks and multiple train/test environment pairings.',
-        outcome: 'Measured up to 100% in-distribution success; single-environment policies dropped to about 20% out of distribution, while merged tabletop + lightbox training recovered 80% success in both environments.',
+        outcome: 'Measured up to 100% in-distribution success; single-environment policies dropped to about 20% out of distribution, while merged tabletop + lightbox training recovered 80% success in both environments. 3rd place among program projects (award certificate); program completion certificate; research poster and recorded results presentation.',
         affiliation: 'UT Dallas STEM Bridge — Intelligent Robotics and Vision Lab (IRVL)',
         impact: 'Demonstrated how diverse training environments improve VLA generalization across lighting and background changes.',
         period: 'Summer 2026 — 6-week structured summer research program',
         links: [
-          { type: 'website', url: 'https://www.ethanli.ai/projects/vla-robot-manipulation', label: 'Research page with demo & results' },
+          { type: 'website', url: 'https://www.ethanli.ai/projects/vla-robot-manipulation', label: 'Research page with poster, results demo video & findings' },
         ],
       },
       {
@@ -548,6 +554,7 @@ export function upgradeSampleStudentProfile(student: Student): Student {
     traits: sample.traits,
     angles: sample.angles,
     activities: sample.activities.map(activity => ({ ...activity, grades: [...activity.grades] })),
+    awards: sample.awards.map(award => ({ ...award })),
     projects: sample.projects?.map(project => ({ ...project, links: project.links?.map(l => ({ ...l })) })),
     whyMajorEvidence: sample.whyMajorEvidence,
     websiteUrl: sample.websiteUrl ?? student.websiteUrl,
