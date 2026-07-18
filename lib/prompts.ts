@@ -1,121 +1,8 @@
 import type { CourseYear, Student } from '@/types';
-import { SCHOOLS } from './schools';
-
-// Data sourced from: Common Data Set submissions, USNWR, school admissions offices.
-// csAccept = CS/engineering program-specific admit rate (where available and publicly reported).
-function buildSchoolReferenceTable(): string {
-  const rows = SCHOOLS.map(s => {
-    const majors = s.majors.slice(0, 2).join(', ');
-    const acceptStr = s.csAccept != null
-      ? `${s.accept}% (CS:${s.csAccept}%)`
-      : `${s.accept}%`;
-    return `| ${s.short.padEnd(16)} | ${s.type.padEnd(7)} | ${acceptStr.padEnd(14)} | ${String(s.sat).padEnd(8)} | ${String(s.gpa).padEnd(8)} | #${String(s.ranking).padEnd(3)} | ${majors}`;
-  });
-  return [
-    '| School           | Type    | Accept (CS-specific)  | Med SAT  | Med GPA  | Rank | Top Majors',
-    '|------------------|---------|----------------------|----------|----------|------|------------',
-    ...rows,
-  ].join('\n');
-}
-
-export const STRATEGY_SYSTEM_PROMPT = `You are an elite U.S. college admissions strategist AND decision optimization engine.
-
-Your responsibility is NOT to give generic advice.
-Your responsibility is to:
-1) Estimate admission probability for each school
-2) Optimize the overall application strategy
-3) Maximize the probability of at least one strong admission
-4) Provide actionable improvements that increase success probability
-
-You must think like:
-- An admissions officer (evaluation)
-- A strategist (portfolio construction)
-- A consultant (clear recommendations)
-
-Be precise, structured, and decisive. No fluff.
-
----
-
-STEP 1: FEATURE NORMALIZATION
-
-For the student:
-- Normalize Academic strength (0–1)
-- Normalize Spike strength (0–1)
-- Estimate Activity impact (0–1)
-- Estimate Essay quality (0–1, assume reasonable if missing)
-- Estimate Recommendation strength (0–1, assume reasonable if missing)
-- Compute Alignment score (major + narrative consistency)
-
-For each school:
-- Compute Selectivity pressure using acceptance rate
-- Determine Program fit
-
----
-
-STEP 2: ADMISSION PROBABILITY MODEL
-
-For each school, compute Z score:
-
-Z =
-  1.1 * Academic
-+ 1.1 * Spike
-+ 0.8 * Program Fit
-+ 0.6 * Activity
-+ 0.5 * Essay
-+ 0.5 * Recommendation
-+ 0.4 * Alignment
-- 1.5 * Selectivity
-+ Context Adjustment
-
-Then compute: P = 1 / (1 + exp(-Z))
-
-Apply calibration multipliers (HARD RULE — apply always):
-- Acceptance rate < 5%  → multiply P by 0.45 (max 12% for any applicant)
-- Acceptance rate 5–8%  → multiply P by 0.55 (max 18% for any applicant)
-- Acceptance rate 8–15% → multiply P by 0.65 (max 28% for any applicant)
-- Acceptance rate 15–30% → multiply P by 0.80
-- Acceptance rate > 30%  → multiply P by 1.1 (cap at 0.88)
-
-ADDITIONAL SAT PENALTY:
-- If student SAT is below school's median SAT → multiply by additional 0.80
-- If student SAT is more than 60 pts below median → multiply by additional 0.65
-
-CALIBRATION RULE — use the CS-specific accept rate (shown as "CS:X%" in the school table above) when computing Selectivity pressure. If only the overall rate is available, use that. The CS-specific rates come from Common Data Set submissions and school admissions offices.
-
-For any school where the CS accept rate is under 10%: your final P% for that school must not exceed 2.5× the CS accept rate (e.g. CS accept 7% → P max 17.5%). For schools under 5% CS accept, max P is 2× the CS accept rate.
-
----
-
-STEP 3: CLASSIFICATION
-
-- If acceptance rate < 8% → always Reach regardless of P
-- Else:
-  - P < 15% → Reach
-  - 15–35% → Match
-  - >35% → Safety
-
----
-
-STEP 4: PORTFOLIO OPTIMIZATION
-
-Construct list:
-- 2–4 Reach
-- 3–5 Match
-- 2–3 Safety
-
-Compute: P(at least one acceptance) = 1 - Π(1 - P_i)
-
-Identify and fix issues: over-concentration, weak Safety coverage, ED/EA opportunities.
-
----
-
-IMPORTANT RULES:
-- NEVER output a probability higher than the real-world benchmark max for that school tier
-- Do NOT be optimistic without justification — err on the side of caution
-- A student with SAT below school median should ALWAYS have lower P than a student above median
-- Always tie reasoning to student inputs
-- Keep tone professional and analytical
-- Focus on decision-making, not description`;
+import { TIER_META } from './admissions/definitions';
+import type { ProfileAssessment } from './admissions/assessment';
+import type { EngineResult, SchoolEvaluation } from './admissions/engine';
+import { getSchoolFacts } from './admissions/schoolFacts';
 
 export interface SchoolResearchContext {
   school_name: string;
@@ -128,7 +15,9 @@ export interface SchoolResearchContext {
   official_vs_community: string;
 }
 
-export function buildStrategyPrompt(student: Student, researchContext?: SchoolResearchContext[]): string {
+/* ── Shared profile serialization ──────────────────────────── */
+
+export function serializeStudentProfile(student: Student): string {
   const activitiesSummary = student.activities.length
     ? student.activities
         .slice(0, 10)
@@ -143,7 +32,6 @@ export function buildStrategyPrompt(student: Student, researchContext?: SchoolRe
         .join('\n')
     : '  None listed';
 
-  // Courses: group by year, show level + name + grade + AP score
   const coursesSummary = student.courses && student.courses.length > 0
     ? (() => {
         const byYear = new Map<CourseYear, NonNullable<Student['courses']>>();
@@ -163,42 +51,29 @@ export function buildStrategyPrompt(student: Student, researchContext?: SchoolRe
       })()
     : null;
 
-  // Projects: signal-rich section for spike detection
   const projectsSummary = student.projects && student.projects.length > 0
     ? student.projects
         .slice(0, 6)
-        .map((p, i) => `  ${i + 1}. [${p.type}/${p.field}] ${p.name}${p.affiliation ? ` (${p.affiliation})` : ''} — ${p.description} | Outcome: ${p.outcome}${p.impact ? ` | Impact: ${p.impact}` : ''}`)
+        .map((p, i) => {
+          const links = p.links?.length
+            ? ` | Verifiable artifacts: ${p.links.map(l => `${l.type}${l.label ? ` (${l.label})` : ''}: ${l.url}`).join(', ')}`
+            : ' | Verifiable artifacts: none provided';
+          return `  ${i + 1}. [${p.type}/${p.field}] ${p.name}${p.affiliation ? ` (${p.affiliation})` : ''} — ${p.description} | Outcome: ${p.outcome}${p.impact ? ` | Impact: ${p.impact}` : ''}${links}`;
+        })
         .join('\n')
     : null;
 
-  const spikeHint = student.awards.some(a => a.level === 'National' || a.level === 'International')
-    ? 'A (national-level recognition)'
-    : (student.projects && student.projects.length > 0)
-    ? 'A/B (research/project depth — evaluate from projects section)'
-    : student.activities.length >= 3
-    ? 'B (strong consistent involvement)'
-    : 'C (developing)';
-
-  const schoolTable = buildSchoolReferenceTable();
-
-  // Compute per-school stat deltas to help Claude calibrate
-  const satNum = parseInt(student.sat) || 0;
-  const gpaNum = parseFloat(student.gpa) || 0;
-  const schoolDeltas = SCHOOLS.map(s => {
-    const satDelta = satNum - s.sat;
-    const gpaDelta = gpaNum - s.gpa;
-    return `  ${s.short}: SAT ${satDelta >= 0 ? '+' : ''}${satDelta} vs median, GPA ${gpaDelta >= 0 ? '+' : ''}${gpaDelta.toFixed(2)} vs median`;
-  }).join('\n');
-
-  // School context adjustment: if school avg SAT is known, show student relative to school
-  const schoolContextNote = student.schoolAvgSat
-    ? `- School avg SAT: ${student.schoolAvgSat} (student is ${satNum > student.schoolAvgSat ? '+' : ''}${satNum - student.schoolAvgSat} vs school mean — use for context score adjustment)`
-    : '';
+  const onlinePresence = [
+    student.websiteUrl ? `- Personal website: ${student.websiteUrl}` : '',
+    student.githubUrl ? `- GitHub: ${student.githubUrl}` : '',
+    student.linkedinUrl ? `- LinkedIn: ${student.linkedinUrl}` : '',
+  ].filter(Boolean).join('\n');
 
   const extendedProfile = [
     student.classRank ? `- Class rank: ${student.classRank}${student.classSize ? ` | Class size: ${student.classSize}` : ''}` : student.classSize ? `- Class size: ${student.classSize}` : '',
     student.gpaScale ? `- Weighted GPA scale: ${student.gpaScale}` : '',
     student.apIbOffered ? `- AP/IB courses offered by school: ${student.apIbOffered}` : '',
+    student.schoolAvgSat ? `- School average SAT: ${student.schoolAvgSat}` : '',
     student.satMath || student.satReadingWriting ? `- SAT sections: Math ${student.satMath ?? 'N/A'} | Reading & Writing ${student.satReadingWriting ?? 'N/A'} | Superscore: ${student.satSuperscore ?? 'Unknown'}` : '',
     student.testOptionalPlan ? `- Score submission plan: ${student.testOptionalPlan}${student.plannedRetake ? ` | Planned retake: ${student.plannedRetake}` : ''}` : student.plannedRetake ? `- Planned retake: ${student.plannedRetake}` : '',
     student.englishTest ? `- English proficiency: ${student.englishTest}` : '',
@@ -223,21 +98,11 @@ export function buildStrategyPrompt(student: Student, researchContext?: SchoolRe
     student.recommenderPlan ? `- Recommendation plan: ${student.recommenderPlan}` : '',
     student.preferredRegions?.length ? `- Preferred regions: ${student.preferredRegions.join(', ')}` : '',
     student.excludedRegions?.length ? `- Excluded regions: ${student.excludedRegions.join(', ')}` : '',
-    student.preferredSettings?.length ? `- Preferred settings: ${student.preferredSettings.join(', ')}` : '',
-    student.preferredSchoolSizes?.length ? `- Preferred school sizes: ${student.preferredSchoolSizes.join(', ')}` : '',
     student.schoolMustHaves ? `- School must-haves: ${student.schoolMustHaves}` : '',
     student.schoolAvoids ? `- School deal-breakers: ${student.schoolAvoids}` : '',
   ].filter(Boolean).join('\n');
 
-  return `Run your full 8-step analysis on this student. Then output ONLY valid JSON — no prose, no markdown fences outside the JSON.
-
-SCHOOL REFERENCE DATABASE — you MUST anchor every P% estimate to these real statistics:
-${schoolTable}
-
-STUDENT vs SCHOOL STAT DELTAS (positive = student above median):
-${schoolDeltas}
-
-STUDENT PROFILE:
+  return `STUDENT PROFILE:
 - Name: ${student.name}
 - Grade: ${student.grade}
 - High School: ${student.school || 'Not specified'} (${student.schoolType})
@@ -248,7 +113,6 @@ STUDENT PROFILE:
 - AP/IB courses total: ${student.apCount}
 - Intended major: ${student.major || 'Undecided'}
 - Secondary interest: ${student.secondary || 'None'}
-- Spike tier (estimated): ${spikeHint}
 - Target range: ${student.targetRange}
 - Risk appetite: ${student.risk}
 - First-generation: ${student.firstGen}
@@ -256,7 +120,7 @@ STUDENT PROFILE:
 - Preferred schools: ${student.preferred || 'None specified'}
 - Academic strengths: ${student.strengths.join(', ') || 'Not specified'}
 - Known weaknesses: ${student.weak.join(', ') || 'None specified'}
-${schoolContextNote}
+${onlinePresence}
 ${extendedProfile}
 ${coursesSummary ? `\nTranscript (course-level detail):\n${coursesSummary}` : ''}
 Activities:
@@ -264,115 +128,105 @@ ${activitiesSummary}
 
 Awards/Honors:
 ${awardsSummary}
-${projectsSummary ? `\nResearch & Projects (HIGH SIGNAL — weight heavily for spike and rigor scores):\n${projectsSummary}` : ''}
+${projectsSummary ? `\nResearch & Projects (HIGH SIGNAL for spike and major preparation):\n${projectsSummary}` : ''}
 Positioning angles: ${student.angles || 'Not specified'}
-Profile notes: ${student.traits || 'Not specified'}
-${researchContext && researchContext.length > 0 ? `
----
-
-SCHOOL RESEARCH DATA (from official sources + Reddit community — use this to refine admission probability estimates and tailor strategy):
-${researchContext.map(r => `
-[${r.school_name} — ${r.program}]
-• Admission requirements: ${r.admission_requirements}
-• Program details: ${r.program_details}
-• Career outcomes: ${r.career_outcomes}
-• Community insights: ${r.community_insights}
-• Application tips: ${r.application_tips.slice(0, 4).join(' | ')}
-• Official vs community: ${r.official_vs_community}
-`).join('\n')}` : ''}
----
-
-After completing all analysis steps internally, output this exact JSON schema:
-
-{
-  "analysis": {
-    "spike_assessment": "string — Tier (A/B/C) verdict with explicit evidence: cite the 1–2 specific activities/projects that create the spike, their depth and measurable outcomes, and how this spike differentiates this applicant from the typical CS/engineering pool. Be specific — name the project and its metrics.",
-    "academic_rigor": "string — Cite specific AP courses by name and grade (from transcript if available). Assess rigor quality, not just quantity: are these the hard sciences + math sequence expected at top schools? How does the GPA read in context of course load? Any SAT/score gaps vs target school medians that require explanation?",
-    "profile_read": "string — 3–4 sentences written as an admissions officer's first-read impression. What is the dominant narrative? What question does this application raise? What is the single most compelling element and the single most concerning element?",
-    "key_risks": "string — 2–3 specific, concrete risks with direct probability impact. Not generic ('SAT is low') but calibrated ('SAT 1540 is 30pts below MIT median — applies the ×0.80 penalty, reducing P(MIT) by ~3pp. At CMU SCS with 7% CS accept rate, even a strong spike hits the 2.5× cap at ~17.5% max P')."
-  },
-  "positioning": {
-    "type": "string — precise archetype label derived from spike + major alignment",
-    "identity": "string — 2–3 sentences: core identity, what makes this applicant distinctive, calibrated to actual profile strength",
-    "strengths": ["string", "string", "string", "string"],
-    "weaknesses": ["string", "string", "string"]
-  },
-  "competitiveness": {
-    "top10": {
-      "level": "High|Medium-High|Medium|Medium-Low|Low",
-      "note": "string — 2–3 sentences: which specific Z-score factors drive this level, what the SAT/GPA delta vs median implies, what the spike contributes, what the calibration multiplier does to raw P"
-    },
-    "top20": {
-      "level": "High|Medium-High|Medium|Medium-Low|Low",
-      "note": "string — same format: name the factors, cite the numbers"
-    },
-    "top50": {
-      "level": "Very High|High|Medium-High|Medium",
-      "note": "string — same format"
-    },
-    "bullets": [
-      "string — portfolio-level insight with P(at least one acceptance) logic",
-      "string — specific probability driver or risk",
-      "string — actionable takeaway"
-    ]
-  },
-  "schools": {
-    "reach": [
-      {
-        "name": "string — real school name",
-        "chance": "X%",
-        "note": "string — 2 sentences: (1) what drives P upward for this student at this school specifically (spike fit, program alignment, demographics), (2) what drives P downward (selectivity cap, SAT penalty, pool competition). End with the calibration applied."
-      }
-    ],
-    "match": [
-      {
-        "name": "string",
-        "chance": "X%",
-        "note": "string — same 2-sentence format"
-      }
-    ],
-    "safety": [
-      {
-        "name": "string",
-        "chance": "X%",
-        "note": "string — same 2-sentence format"
-      }
-    ]
-  },
-  "strategy": {
-    "ed_ea": "string — concrete ED/EA/REA recommendation with probability uplift estimate (e.g. 'ED CMU: +12pp uplift over RD'). Justify using portfolio optimization logic.",
-    "narrative": "string — 3–4 sentences on essay angle and positioning. Tie to the identified spike and alignment score. Name the specific story to tell."
-  },
-  "plan": [
-    { "month": "May 2026", "tasks": "string — specific, prioritized tasks" },
-    { "month": "Jun 2026", "tasks": "string" },
-    { "month": "Jul 2026", "tasks": "string" },
-    { "month": "Aug 2026", "tasks": "string" },
-    { "month": "Sep 2026", "tasks": "string" },
-    { "month": "Oct 2026", "tasks": "string" },
-    { "month": "Nov 2026", "tasks": "string" },
-    { "month": "Dec 2026 – Jan 2027", "tasks": "string" }
-  ],
-  "meta": {
-    "overall_success_probability": "XX%",
-    "assessment": "string — 1–2 sentences on portfolio aggressiveness and balance",
-    "improvement_levers": [
-      "Action → +X% impact at [school tier]",
-      "Action → +X% impact",
-      "Action → +X% impact"
-    ]
-  }
+Profile notes: ${student.traits || 'Not specified'}`;
 }
 
-Rules:
-- Reach: 2–4 schools with calibrated P% (use acceptance rate calibration from the model)
-- Match: 3–5 schools
-- Safety: 2–3 schools
-- Use real school names (MIT, Stanford, CMU, Harvard, Yale, Princeton, Duke, Rice, Cornell, Berkeley, Georgia Tech, UCLA, UMich, UIUC, UT Austin Turing, etc.)
-- P% must reflect the logistic model with calibration — do not pad probabilities
-- No "well-rounded student", no guaranteed admissions language
-- analysis.spike_assessment, analysis.academic_rigor, analysis.profile_read, analysis.key_risks MUST be substantive — minimum 2 sentences each, cite specific data from the student profile
-- school notes MUST follow the 2-sentence format: positive drivers then negative drivers
-- competitiveness notes MUST cite specific numbers (SAT delta, GPA delta, calibration multiplier)
-- CRITICAL: All JSON string values must be on a single line — no literal newlines or tabs inside strings`;
+/* ── Step 1: profile assessment ────────────────────────────── */
+
+export const ASSESSMENT_SYSTEM_PROMPT = `You are a veteran U.S. college admissions counselor performing a structured first-read of a student file, the way a trained admissions officer would.
+
+Your job is QUALITATIVE GRADING ONLY. You grade ten dimensions of the profile. You do NOT estimate admission probabilities, do NOT name schools, and do NOT give strategy — a downstream deterministic engine handles that using your grades.
+
+Grading discipline:
+- Every grade must cite specific evidence from the profile (name the course, the project, the award, the metric). No evidence, no grade above "solid".
+- Grade curriculum rigor RELATIVE to what the high school offers: 9 APs at a school offering 10 is maximal rigor; 9 APs at a school offering 28 is not.
+- Post-2023 (SFFA ruling) context: background and adversity now enter the file through essays and context fields. If backgroundContext / challenges / first-gen / family responsibilities contain usable narrative material, that affects narrative_coherence and institutional_fit grading — note when this material is being left unused.
+- Distinguish the STUDENT from the APPLICATION: academic_readiness through narrative_coherence grade who the student is; application_readiness grades how complete the materials are (essays drafted? recommenders locked? test plan settled?). A strong student with unwritten essays is strong on the former and developing on the latter.
+- Verification states (pick the strongest the evidence supports): externally_verified = award result, publication, or official record; institution_affiliated = a named school/university/company confirms participation; link_verified = a GitHub/site/demo URL exists but impact is not third-party-confirmed; self_reported_only = student's account with no anchor; conflicting_or_incomplete = materials disagree or key facts are missing.
+- CRITICAL: self_reported_only means "not yet verified", NOT "low quality". Grade the tier on the substance described; express the uncertainty through verifiability + confidence + overstatement_risk, never by silently lowering the tier.
+- Links are anchors, not proof of quality: a provided URL makes a claim checkable, but you cannot open it — never assume repo activity, video content, or paper venue beyond what the profile states. Note in "missing" when a strong claim lacks any link an AO could click.
+- Be honest about what you cannot know. Use "missing", "assessment_gaps" and confidence levels aggressively. "Cannot reliably judge" is a valid and useful output.
+- Err on the side of caution. The typical applicant pool at selective schools is brutally strong; "solid" is the honest median grade, not an insult.`;
+
+export function buildAssessmentPrompt(student: Student): string {
+  return `Perform your structured first-read of this student. Grade all ten dimensions with cited evidence, then submit via the tool.
+
+${serializeStudentProfile(student)}`;
+}
+
+/* ── Step 3: counselor narrative over computed results ─────── */
+
+export const NARRATIVE_SYSTEM_PROMPT = `You are a veteran U.S. college admissions counselor writing up a strategy report for a family.
+
+You are given (a) a structured profile assessment and (b) COMPUTED school evaluations from a deterministic calibration engine: tiers, probability bands, adjustment traces, portfolio math, and early-round leverage grades. These numbers are AUTHORITATIVE — your job is to explain them in counselor language, not to change them.
+
+Hard rules:
+- NEVER invent, adjust, or restate probabilities beyond quoting the tiers/bands you were given.
+- When explaining a school's placement, ground it in that school's actual trace factors (they are listed for you).
+- Early rounds: use the strategic-value grades provided. Published ED/RD gaps carry selection bias — discuss ED as leverage and commitment, never as "multiplies your odds by N".
+- Improvement levers describe qualitative effects on assessment dimensions with deadlines — never percentage-point claims.
+- The plan works BACKWARD from deadlines (early rounds Nov 1, RD Jan 1); every month's tasks should name which application component they feed.
+- Tone: professional, direct, specific. No "well-rounded student", no guaranteed-admission language, no fluff.
+- All JSON string values must be single-line (no literal newlines).`;
+
+function describeEvaluation(ev: SchoolEvaluation): string {
+  const facts = getSchoolFacts(ev.schoolId);
+  const edGrade = facts?.edStrategicValue?.value ?? 'unknown';
+  const traceSummary = ev.trace
+    .filter(t => t.stepDelta !== 0 || t.ruleId === 'base_rate' || t.ruleId === 'ed_opportunity')
+    .map(t => `${t.stepDelta > 0 ? '+' : t.stepDelta < 0 ? '−' : '·'} ${t.label}`)
+    .join('; ');
+  return `- ${ev.short} [${ev.uiBucket.toUpperCase()}] → ${ev.tierLabel} (${ev.band.min}–${ev.band.max}%) | ED value: ${edGrade} | factors: ${traceSummary}${ev.flags.length ? ` | flags: ${ev.flags.join(', ')}` : ''}`;
+}
+
+export function buildNarrativePrompt(
+  student: Student,
+  assessment: ProfileAssessment,
+  engine: EngineResult,
+  researchContext?: SchoolResearchContext[],
+): string {
+  const dims = Object.entries(assessment.dimensions)
+    .map(([k, d]) => `- ${k}: ${d.tier} (${d.verifiability}, confidence ${d.confidence}) — ${d.evidence[0] ?? 'no evidence cited'}`)
+    .join('\n');
+
+  const research = researchContext && researchContext.length > 0
+    ? `\nSCHOOL RESEARCH DATA (official + community — use for school notes and strategy color):\n${researchContext.map(r => `[${r.school_name} — ${r.program}] ${r.admission_requirements} | ${r.community_insights} | Tips: ${r.application_tips.slice(0, 3).join('; ')}`).join('\n')}\n`
+    : '';
+
+  return `Write the strategy report for this family. Submit via the tool. School notes are required for EVERY school listed below, using the exact short names given.
+
+${serializeStudentProfile(student)}
+
+---
+
+PROFILE ASSESSMENT (your colleague's structured first-read — cite it):
+Spike: ${assessment.spike.has_spike ? `YES — ${assessment.spike.domain}. ${assessment.spike.summary}` : `No clear spike. ${assessment.spike.summary}`}
+AO first read: ${assessment.profile_read}
+Key risks: ${assessment.key_risks.join(' | ')}
+Dimensions:
+${dims}
+Assessment gaps: ${assessment.assessment_gaps.join('; ') || 'none noted'}
+
+---
+
+COMPUTED SCHOOL EVALUATIONS — the student's own list (authoritative — explain, do not alter):
+${engine.selected.map(describeEvaluation).join('\n')}
+${engine.suggestions.length ? `
+ENGINE-SUGGESTED ADDITIONS (not on the student's list — the engine proposes these to patch coverage gaps; reference them in ed_ea_strategy or bullets as recommendations to discuss with the family, and do NOT write school_notes for them):
+${engine.suggestions.map(describeEvaluation).join('\n')}
+` : ''}${engine.portfolio.unmatchedPreferred.length ? `
+UNRESOLVED PREFERRED SCHOOLS: ${engine.portfolio.unmatchedPreferred.join(', ')} — these names could not be matched to the school database; mention in bullets that they were not analyzed.
+` : ''}
+
+PORTFOLIO MATH (authoritative):
+- P(at least one admit): ${engine.portfolio.pAtLeastOne.lowerPct}–${engine.portfolio.pAtLeastOne.upperPct}% (${engine.portfolio.pAtLeastOne.note})
+- Coverage: ${engine.portfolio.coverage.reach} reach / ${engine.portfolio.coverage.match} match / ${engine.portfolio.coverage.safety} safety
+- Shutout risk: ${engine.portfolio.shutoutRisk}${engine.portfolio.warnings.length ? ` | warnings: ${engine.portfolio.warnings.join(', ')}` : ''}
+- Computed competitiveness levels — Top 10: ${engine.portfolio.competitivenessLevels.top10}, Top 20: ${engine.portfolio.competitivenessLevels.top20}, Top 50: ${engine.portfolio.competitivenessLevels.top50}
+${research}
+Tier vocabulary for reference: ${Object.values(TIER_META).map(t => `${t.label} ${t.band.min}–${t.band.max}%`).join(', ')}.
+
+Today's date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}. The student applies in the upcoming cycle — plan months must be real month names (e.g. "August 2026"), starting from today's month and running through the RD deadlines.`;
 }

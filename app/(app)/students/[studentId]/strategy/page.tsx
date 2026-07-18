@@ -1,6 +1,7 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Sparkles, ArrowRight, Check,
@@ -12,6 +13,7 @@ import {
   User, BarChart2, GraduationCap, Lightbulb, ListTodo, Plus, X,
   ChevronDown, ChevronRight, Quote,
   FlaskConical, BookOpen, Eye, TriangleAlert,
+  ShieldAlert, Info, Database,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -21,7 +23,9 @@ import {
 import { useApp } from '@/context/AppContext';
 import { LOADING_STEPS } from '@/lib/data';
 import { strategySchema } from '@/lib/schemas';
-import type { Strategy } from '@/types';
+import { getSchoolFacts } from '@/lib/admissions/schoolFacts';
+import { BUCKET_BADGE, CHART_BUCKET_COLOR, CONF_CHIP, SHUTOUT_STYLE } from '@/components/assessment/ui';
+import type { Strategy, StrategyLever, StrategyV2, Student as StudentT } from '@/types';
 
 /* ── Types ────────────────────────────────────────────────── */
 
@@ -105,8 +109,8 @@ function computePortfolioProb(schools: Strategy['schools'], adj: Record<string, 
 
 /* ── Probability Gauge ────────────────────────────────────── */
 
-function ProbabilityGauge({ value, adjusted }: { value: string; adjusted?: number }) {
-  const original = parseChance(value);
+function ProbabilityGauge({ value, adjusted, range }: { value: string; adjusted?: number; range?: { min: number; max: number } }) {
+  const original = range ? Math.round((range.min + range.max) / 2) : parseChance(value);
   const display = adjusted ?? original;
   const changed = adjusted !== undefined && adjusted !== original;
   const r = 46, cx = 62, cy = 64;
@@ -131,10 +135,22 @@ function ProbabilityGauge({ value, adjusted }: { value: string; adjusted?: numbe
         {changed && (
           <path d={arcPath(original)} fill="none" stroke="#cbd5e1" strokeWidth={8} strokeLinecap="round" strokeDasharray="4 3" />
         )}
-        <path d={arcPath(display)} fill="none" stroke={color} strokeWidth={8} strokeLinecap="round" />
-        <text x={cx} y={cy + 2} textAnchor="middle" fontSize={22} fontWeight={700} fill={color}>{display}%</text>
-        <text x={cx} y={cy + 18} textAnchor="middle" fontSize={9} fill="#94a3b8" letterSpacing={0.5}>P(≥1 ADMIT)</text>
+        {range && (
+          <path d={arcPath(range.max)} fill="none" stroke={color} strokeWidth={8} strokeLinecap="round" strokeOpacity={0.25} />
+        )}
+        <path d={arcPath(range ? range.min : display)} fill="none" stroke={color} strokeWidth={8} strokeLinecap="round" />
+        {range ? (
+          <text x={cx} y={cy + 2} textAnchor="middle" fontSize={17} fontWeight={700} fill={color}>{range.min}–{range.max}%</text>
+        ) : (
+          <text x={cx} y={cy + 2} textAnchor="middle" fontSize={22} fontWeight={700} fill={color}>{display}%</text>
+        )}
+        <text x={cx} y={cy + 18} textAnchor="middle" fontSize={9} fill="#94a3b8" letterSpacing={0.5}>{range ? 'P(≥1 ADMIT) RANGE' : 'P(≥1 ADMIT)'}</text>
       </svg>
+      {range && (
+        <div className="text-[10px] text-[var(--muted)] text-center leading-snug max-w-[130px] -mt-0.5">
+          solid = correlated floor · faint = independent ceiling
+        </div>
+      )}
       {changed && delta !== 0 && (
         <div className={`text-[11px] font-bold px-2 py-0.5 rounded-full -mt-1 ${delta > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
           {delta > 0 ? '+' : ''}{delta}pp vs baseline
@@ -214,7 +230,7 @@ function LeverCard({
 /* ── School Chart with adjustments ───────────────────────── */
 
 function SchoolChart({ schools, adjustments }: { schools: Strategy['schools']; adjustments: Record<string, number> }) {
-  const tierColor: Record<string, string> = { reach: '#f87171', match: '#fbbf24', safety: '#34d399' };
+  const tierColor = CHART_BUCKET_COLOR;
   const hasAdj = Object.values(adjustments).some(v => v > 0);
 
   const data = [
@@ -347,6 +363,383 @@ function CompetitivenessChart({ comp }: { comp: Strategy['competitiveness'] }) {
   );
 }
 
+/* ── V2: engine-audit components ──────────────────────────── */
+
+type V2Evaluation = StrategyV2['evaluations'][number];
+
+function ConfChip({ kind, level }: { kind: 'Data' | 'Profile'; level: string }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border ${CONF_CHIP[level] ?? CONF_CHIP.medium}`}
+      title={kind === 'Data'
+        ? 'How reliable the school-side data (admit rates, policies) is for this estimate'
+        : 'How complete the student profile was for this judgment'}
+    >
+      {kind === 'Data' ? <Database size={9} /> : <Eye size={9} />}
+      {kind}: {level}
+    </span>
+  );
+}
+
+function TierRangeBadge({ ev }: { ev: V2Evaluation }) {
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-pill border ${BUCKET_BADGE[ev.uiBucket]}`}>
+      {ev.tierLabel} · {ev.band.min}–{ev.band.max}%
+    </span>
+  );
+}
+
+const BASIS_LABEL: Record<string, string> = {
+  official_fact: 'Official data',
+  derived_stat: 'Derived stat',
+  llm_assessment: 'AI profile read',
+  policy_rule: 'Calibration rule',
+  expert_estimate: 'Counselor judgment',
+};
+
+function TraceDisclosure({ ev }: { ev: V2Evaluation }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-2">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 text-[11.5px] font-medium transition-colors"
+        style={{ color: 'var(--accent)' }}
+      >
+        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        Why {ev.tierLabel.toLowerCase()}? ({ev.trace.length} factors)
+        <span className="flex items-center gap-1 ml-1">
+          <ConfChip kind="Data" level={ev.dataConfidence} />
+          <ConfChip kind="Profile" level={ev.assessmentConfidence} />
+        </span>
+      </button>
+      {open && (
+        <div className="mt-2 flex flex-col gap-1.5 rounded-lg bg-white border border-[var(--line)] p-3">
+          {ev.trace.map((t, i) => (
+            <div key={i} className="flex items-start gap-2 text-[11.5px]">
+              <span className={`shrink-0 mt-px w-9 text-center font-bold rounded px-1 ${
+                t.stepDelta > 0 ? 'text-emerald-600 bg-emerald-50'
+                : t.stepDelta < 0 ? 'text-red-500 bg-red-50'
+                : 'text-slate-400 bg-slate-50'
+              }`}>
+                {t.stepDelta > 0 ? `+${t.stepDelta}` : t.stepDelta < 0 ? `${t.stepDelta}` : 'info'}
+              </span>
+              <div className="min-w-0">
+                <span className="font-semibold text-[var(--ink)]">{t.label}</span>
+                <span className="text-[var(--muted)]"> — {t.rationale}</span>
+                <span className="ml-1 text-[10px] text-[var(--muted-2)] whitespace-nowrap">[{BASIS_LABEL[t.basis] ?? t.basis}]</span>
+              </div>
+            </div>
+          ))}
+          <div className="text-[10.5px] text-[var(--muted)] pt-1 border-t border-[var(--line)]">
+            Tier steps move within hard selectivity caps: {ev.ceilingReason.toLowerCase()}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ShutoutStrip({ portfolio }: { portfolio: StrategyV2['portfolio'] }) {
+  const { coverage } = portfolio;
+  return (
+    <div className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${SHUTOUT_STYLE[portfolio.shutoutRisk]}`}>
+      <ShieldAlert size={15} className="shrink-0" />
+      <div className="text-[12px] leading-snug">
+        <span className="font-bold capitalize">Shutout risk: {portfolio.shutoutRisk}.</span>{' '}
+        List covers {coverage.reach} reach / {coverage.match} match / {coverage.safety} safety.
+        {portfolio.warnings.includes('no_admission_safety') && ' No school on this list is a true admission safety — see suggested additions below.'}
+        {portfolio.warnings.includes('concentrated_in_gated_majors') && ' Most of the list runs through gated CS admissions — outcomes will be highly correlated.'}
+        {portfolio.warnings.includes('financial_safety_unknown') && ' At least one school offers no need aid for this student — financial safety unconfirmed.'}
+        {portfolio.warnings.includes('unmatched_preferred_schools') && ` Not analyzed (not in the school database): ${(portfolio.unmatchedPreferred ?? []).join(', ')}.`}
+      </div>
+    </div>
+  );
+}
+
+function formatDimension(key: string): string {
+  return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+const DIM_TIER_STYLE: Record<string, string> = {
+  exceptional: 'bg-violet-50 border-violet-200 text-violet-700',
+  strong: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+  solid: 'bg-slate-50 border-slate-200 text-slate-600',
+  developing: 'bg-amber-50 border-amber-200 text-amber-700',
+  concern: 'bg-red-50 border-red-200 text-red-600',
+};
+
+function DimensionGrid({ assessment }: { assessment: StrategyV2['assessment'] }) {
+  return (
+    <div className="mb-4">
+      <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-widest text-[var(--muted)] mb-2">
+        <BarChart2 size={11} /> Ten-Dimension Profile Grades
+        <span className="normal-case tracking-normal font-normal">— hover for evidence</span>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+        {Object.entries(assessment.dimensions).map(([key, d]) => (
+          <div
+            key={key}
+            className={`rounded-lg border px-2.5 py-2 ${DIM_TIER_STYLE[d.tier] ?? DIM_TIER_STYLE.solid}`}
+            title={`${d.evidence[0] ?? 'No evidence cited'}${d.missing.length ? ` | Missing: ${d.missing[0]}` : ''} | Verifiability: ${d.verifiability.replace(/_/g, ' ')}`}
+          >
+            <div className="text-[10px] font-medium leading-tight opacity-80">{formatDimension(key)}</div>
+            <div className="text-[12.5px] font-bold capitalize flex items-center gap-1">
+              {d.tier}
+              {d.verifiability === 'self_reported_only' && <Info size={10} className="opacity-60" aria-label="Self-reported only" />}
+            </div>
+          </div>
+        ))}
+      </div>
+      {assessment.assessment_gaps.length > 0 && (
+        <div className="mt-2 text-[11px] text-[var(--muted)] flex items-start gap-1.5">
+          <Info size={11} className="shrink-0 mt-0.5" />
+          <span>Assessment gaps: {assessment.assessment_gaps.slice(0, 3).join('; ')}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function V2LeverList({ levers }: { levers: StrategyLever[] }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {levers.map((lv, i) => (
+        <div key={i} className="rounded-lg border border-[var(--line)] bg-white px-3.5 py-3">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <span className="text-[12.5px] font-semibold text-[var(--ink)]">{lv.action}</span>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[var(--accent-50)] text-[var(--accent)]">
+              {formatDimension(lv.dimension)}
+            </span>
+            <span className="text-[10.5px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+              ⏱ {lv.deadline}
+            </span>
+          </div>
+          <p className="text-[12px] text-[var(--ink-soft)] leading-relaxed">
+            <span className="font-medium text-emerald-700">{lv.expected_effect}.</span> {lv.rationale}
+          </p>
+          {(lv.evidence_required || lv.material_served) && (
+            <div className="mt-1.5 flex items-center gap-3 flex-wrap text-[10.5px] text-[var(--muted)]">
+              {lv.evidence_required && <span><span className="font-semibold text-[var(--ink-soft)]">Proof:</span> {lv.evidence_required}</span>}
+              {lv.material_served && <span><span className="font-semibold text-[var(--ink-soft)]">Feeds:</span> {lv.material_served}</span>}
+            </div>
+          )}
+        </div>
+      ))}
+      <p className="text-[10.5px] text-[var(--muted)] mt-0.5">
+        Effects are stated as grade movements, not percentage points — nobody can honestly quantify “+3pp”.
+      </p>
+    </div>
+  );
+}
+
+/* ── V2: early-round decision matrix + guardrails ─────────── */
+
+const ED_GRADE_STYLE: Record<string, string> = {
+  high_leverage: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  moderate: 'bg-amber-50 text-amber-700 border-amber-200',
+  limited: 'bg-slate-50 text-slate-600 border-slate-200',
+  not_offered: 'bg-slate-50 text-slate-400 border-slate-200',
+  not_recommended: 'bg-red-50 text-red-600 border-red-200',
+};
+
+function EarlyDecisionMatrix({ v2, student, edEaText }: { v2: StrategyV2; student: StudentT; edEaText: string }) {
+  const evals = v2.evaluations ?? [];
+  const withFacts = evals.map(ev => ({ ev, facts: getSchoolFacts(ev.schoolId) }));
+  const bindingCandidates = withFacts
+    .filter(({ facts }) => facts?.earlyRounds && ['ED', 'ED1_ED2', 'EA_ED'].includes(facts.earlyRounds.value))
+    .sort((a, b) => {
+      const rank = (g?: string) => ({ high_leverage: 0, moderate: 1, limited: 2 }[g ?? 'limited'] ?? 3);
+      return rank(a.facts?.edStrategicValue?.value) - rank(b.facts?.edStrategicValue?.value);
+    })
+    .slice(0, 3);
+  const reaSchools = withFacts.filter(({ facts }) => facts?.earlyRounds?.value === 'REA').map(({ ev }) => ev.short);
+  // The ED pick is excluded from the EA count so ED + EA + RD sums to the list size.
+  const edPickId = bindingCandidates[0]?.ev.schoolId;
+  const eaCount = withFacts.filter(({ ev, facts }) =>
+    ev.schoolId !== edPickId && facts?.earlyRounds && ['EA', 'EA_ED', 'REA'].includes(facts.earlyRounds.value)).length;
+  const financialFlexible = student.needBasedAid === 'No';
+
+  if (!bindingCandidates.length) return null;
+
+  const columns = [
+    ...bindingCandidates.map(({ ev, facts }) => ({
+      title: `${ev.short} ED`,
+      grade: facts?.edStrategicValue?.value ?? 'limited',
+      tier: ev.tierLabel,
+      binding: true,
+      conflict: reaSchools.length ? `Blocks REA at ${reaSchools.join(', ')}` : 'None known',
+      financial: financialFlexible ? 'OK — no aid comparison needed' : 'Low — binds before comparing aid offers',
+    })),
+    {
+      title: 'No binding ED',
+      grade: 'not_offered',
+      tier: '—',
+      binding: false,
+      conflict: 'Keeps all EA/REA options open',
+      financial: 'Full — compare every aid offer',
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="lg:col-span-2 overflow-x-auto">
+        <table className="w-full text-left border-separate" style={{ borderSpacing: 0 }}>
+          <thead>
+            <tr>
+              <th className="text-[10.5px] font-semibold uppercase tracking-widest text-[var(--muted)] px-3 py-2" />
+              {columns.map(c => (
+                <th key={c.title} className="text-[12.5px] font-bold text-[var(--ink)] px-3 py-2 border-b border-[var(--line)]">{c.title}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {([
+              ['Strategic leverage', (c: typeof columns[number]) => (
+                <span className={`text-[10.5px] font-bold capitalize px-2 py-0.5 rounded-pill border ${ED_GRADE_STYLE[c.grade] ?? ED_GRADE_STYLE.limited}`}>
+                  {c.grade === 'not_offered' ? 'n/a' : c.grade.replace(/_/g, ' ')}
+                </span>
+              )],
+              ['Current tier', (c: typeof columns[number]) => <span className="text-[12px] font-semibold text-[var(--ink)]">{c.tier}</span>],
+              ['Binding', (c: typeof columns[number]) => (
+                <span className={`text-[11.5px] font-semibold ${c.binding ? 'text-red-500' : 'text-emerald-600'}`}>{c.binding ? 'Binding' : 'Non-binding'}</span>
+              )],
+              ['Other early rounds', (c: typeof columns[number]) => <span className="text-[11.5px] text-[var(--ink-soft)]">{c.conflict}</span>],
+              ['Financial flexibility', (c: typeof columns[number]) => <span className="text-[11.5px] text-[var(--ink-soft)]">{c.financial}</span>],
+            ] as const).map(([label, render]) => (
+              <tr key={label}>
+                <td className="text-[11px] font-semibold text-[var(--muted)] px-3 py-2.5 border-b border-[var(--line)] whitespace-nowrap">{label}</td>
+                {columns.map(c => (
+                  <td key={c.title} className="px-3 py-2.5 border-b border-[var(--line)] align-top">{render(c)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="mt-3 rounded-lg bg-[var(--accent-50)] border border-[var(--accent-100)] px-4 py-3">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-[var(--accent)] mb-1">Counselor recommendation</div>
+          <p className="text-[12.5px] text-[var(--ink-soft)] leading-relaxed">{edEaText}</p>
+        </div>
+        <p className="mt-2 text-[10.5px] text-[var(--muted)]">
+          Observed ED admit-rate gaps include selection effects (athletes, legacy, development cases) — leverage grades are judgment, never probability multipliers.
+        </p>
+      </div>
+
+      {/* Round allocation + guardrails */}
+      <div className="flex flex-col gap-3">
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--bg-soft)] p-4">
+          <div className="text-[10.5px] font-semibold uppercase tracking-widest text-[var(--muted)] mb-2">Round Allocation</div>
+          <div className="flex gap-2">
+            <RoundBox label="ED" n={1} note="binding pick" accent />
+            <RoundBox label="EA / REA" n={eaCount} note="non-binding" />
+            <RoundBox label="RD" n={Math.max(0, evals.length - 1 - eaCount)} note="regular" />
+          </div>
+          {evals.length > 12 && (
+            <p className="mt-2 text-[11px] text-amber-700 font-medium">⚠ {evals.length} applications — supplement quality and differentiation become the constraint at this volume.</p>
+          )}
+        </div>
+        <div className="rounded-lg border border-[var(--line)] bg-white p-4">
+          <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-widest text-[var(--muted)] mb-2.5">
+            <ShieldAlert size={12} /> AI Guardrails
+          </div>
+          <ul className="flex flex-col gap-2 text-[11.5px] text-[var(--ink-soft)] leading-relaxed">
+            <li>· Tiers and ranges come from the deterministic engine — the AI explains them and cannot change them.</li>
+            <li>· Every recommendation cites profile evidence; unverified claims are flagged, not polished over.</li>
+            <li>· Uncertainty is shown, never hidden: wide bands, confidence labels, and declared unknowns.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RoundBox({ label, n, note, accent = false }: { label: string; n: number; note: string; accent?: boolean }) {
+  return (
+    <div className={`flex-1 rounded-lg border px-2.5 py-2 text-center ${accent ? 'border-[var(--accent-100)] bg-[var(--accent-50)]' : 'border-[var(--line)] bg-white'}`}>
+      <div className={`text-[17px] font-bold ${accent ? '' : 'text-[var(--ink)]'}`} style={accent ? { color: 'var(--accent)' } : {}}>{n}</div>
+      <div className="text-[10px] font-semibold text-[var(--ink-soft)]">{label}</div>
+      <div className="text-[9px] text-[var(--muted)]">{note}</div>
+    </div>
+  );
+}
+
+function BandChart({ evaluations }: { evaluations: V2Evaluation[] }) {
+  const tierColor = CHART_BUCKET_COLOR;
+  const data = [...evaluations]
+    .sort((a, b) => (a.band.min + a.band.max) - (b.band.min + b.band.max))
+    .map(ev => ({
+      name: ev.short,
+      tier: ev.uiBucket,
+      min: ev.band.min,
+      span: ev.band.max - ev.band.min,
+      max: ev.band.max,
+      label: ev.tierLabel,
+    }));
+
+  const truncate = (name: string, max = 26) =>
+    name.length > max ? name.slice(0, max - 1) + '…' : name;
+
+  const renderTick = ({ x, y, payload }: { x?: string | number; y?: string | number; payload?: { value?: string | number } }) => (
+    <g transform={`translate(${x},${y})`}>
+      <title>{payload?.value}</title>
+      <text x={-6} y={0} dy={4} textAnchor="end" fontSize={11.5} fill="#334155">
+        {truncate(String(payload?.value ?? ''))}
+      </text>
+    </g>
+  );
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted)]">
+          Admit Likelihood Bands <span className="text-[var(--accent)] normal-case tracking-normal font-normal ml-1">— ranges, not point estimates</span>
+        </span>
+        <div className="flex items-center gap-3">
+          {(['reach', 'match', 'safety'] as const).map(t => (
+            <div key={t} className="flex items-center gap-1 text-[10.5px] text-[var(--muted)]">
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ background: tierColor[t] }} />
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </div>
+          ))}
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={data.length * 44 + 20}>
+        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 80, bottom: 0, left: 0 }}>
+          <XAxis type="number" domain={[0, 100]} tickFormatter={v => `${v}%`}
+            tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+          <YAxis type="category" dataKey="name" width={170}
+            tick={renderTick} axisLine={false} tickLine={false} />
+          <Tooltip cursor={{ fill: '#f8fafc' }}
+            formatter={(_v, _n, item) => {
+              const d = item.payload;
+              return [`${d.label}: ${d.min}–${d.max}%`, 'Likelihood band'];
+            }}
+            contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }} />
+          <Bar dataKey="min" stackId="band" maxBarSize={22} fill="transparent" isAnimationActive={false} />
+          <Bar dataKey="span" stackId="band" maxBarSize={22} radius={[4, 4, 4, 4]}>
+            {data.map((d, i) => (
+              <Cell key={i} fill={tierColor[d.tier]} fillOpacity={0.85} />
+            ))}
+            <LabelList
+              content={(props) => {
+                const { x, y, width, height, index } = props as { x: number; y: number; width: number; height: number; index: number };
+                const d = data[index];
+                if (!d) return null;
+                return (
+                  <text x={(x as number) + (width as number) + 6} y={(y as number) + (height as number) / 2 + 4}
+                    fontSize={10.5} fontWeight={600} fill="#64748b">
+                    {d.min}–{d.max}%
+                  </text>
+                );
+              }}
+            />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 /* ── JSON repair ──────────────────────────────────────────── */
 
 function repairJson(input: string): string {
@@ -374,6 +767,7 @@ export default function StrategyPage() {
   const studentId = params.studentId as string;
   const student = students.find(s => s.id === studentId);
   const strategy = strategies[studentId] ?? null;
+  const v2 = strategy?.v2 ?? null;
   const [generating, setGenerating] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [genError, setGenError] = useState<string | null>(null);
@@ -410,10 +804,10 @@ export default function StrategyPage() {
     setGenError(null);
     setLoadingStep(0);
     setLeverStates({});
-    for (let i = 0; i < LOADING_STEPS.length; i++) {
-      await new Promise(r => setTimeout(r, 700 + Math.random() * 400));
-      setLoadingStep(i + 1);
-    }
+    // Advance the step display while the request runs (real work, not theater)
+    const stepTimer = setInterval(() => {
+      setLoadingStep(prev => Math.min(prev + 1, LOADING_STEPS.length - 1));
+    }, 9000);
     try {
       const res = await fetch('/api/strategy', {
         method: 'POST',
@@ -448,12 +842,15 @@ export default function StrategyPage() {
       }
       const savedOk = await saveStrategy(studentId, parsed.data);
       if (!savedOk) {
-        setGenError('The strategy was generated and is shown below, but saving it failed — it may disappear on refresh. Check your connection and regenerate to retry.');
+        // The server already persisted the strategy before responding — only
+        // this window's local copy failed to sync.
+        setGenError('The strategy was generated and saved on the server, but this window could not sync its local copy. Reload the page to pick it up.');
       }
     } catch (e) {
       console.warn('Strategy generation failed', e);
       setGenError(e instanceof Error ? e.message : 'Unknown error');
     } finally {
+      clearInterval(stepTimer);
       setGenerating(false);
     }
   };
@@ -548,9 +945,10 @@ export default function StrategyPage() {
             <div className="px-5 py-5 flex flex-col items-center justify-center border-r border-[var(--accent-100)] shrink-0 gap-1">
               <ProbabilityGauge
                 value={strategy.meta.overall_success_probability}
-                adjusted={hasActiveLevers ? adjustedProb : undefined}
+                adjusted={!v2 && hasActiveLevers ? adjustedProb : undefined}
+                range={v2 ? { min: v2.portfolio.pAtLeastOne.lowerPct, max: v2.portfolio.pAtLeastOne.upperPct } : undefined}
               />
-              <div className="text-[9.5px] font-semibold uppercase tracking-widest text-[var(--accent)]">Portfolio Score</div>
+              <div className="text-[9.5px] font-semibold uppercase tracking-widest text-[var(--accent)]">Portfolio Outlook</div>
             </div>
             {/* Content */}
             <div className="flex-1 px-5 py-5 flex flex-col gap-3 min-w-0">
@@ -570,8 +968,21 @@ export default function StrategyPage() {
                 </div>
               </div>
 
-              {/* Interactive levers */}
-              {parsedLevers.length > 0 && (
+              {/* Shutout risk + coverage (v2 audit) */}
+              {v2 && <ShutoutStrip portfolio={v2.portfolio} />}
+
+              {/* Structured improvement levers (v2) — grade movements, no fake pp math */}
+              {v2 && v2.levers.length > 0 && (
+                <div className="border-t border-[var(--accent-100)] pt-3">
+                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--accent)] mb-2">
+                    <Zap size={11} /> Improvement Levers — deadline-bound actions that move profile grades
+                  </div>
+                  <V2LeverList levers={v2.levers} />
+                </div>
+              )}
+
+              {/* Interactive levers (v1 legacy simulator) */}
+              {!v2 && parsedLevers.length > 0 && (
                 <div className="border-t border-[var(--accent-100)] pt-3">
                   <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--accent)] mb-2">
                     <Zap size={11} /> Simulate Improvements — apply items to preview probability changes
@@ -650,6 +1061,7 @@ export default function StrategyPage() {
         {/* 02 Analysis */}
         {strategy.analysis && (
           <StratCard num="02" title="Profile Analysis" icon={<FlaskConical size={16} />}>
+            {v2 && <DimensionGrid assessment={v2.assessment} />}
             <div className="flex flex-col gap-4">
               <AnalysisBlock icon={<Zap size={13} className="text-violet-500" />} label="Spike Assessment" color="violet" text={strategy.analysis.spike_assessment} />
               <AnalysisBlock icon={<BookOpen size={13} className="text-blue-500" />} label="Academic Rigor" color="blue" text={strategy.analysis.academic_rigor} />
@@ -688,7 +1100,9 @@ export default function StrategyPage() {
 
         {/* 04 School List — chart reacts to lever state */}
         <StratCard num={strategy.analysis ? '04' : '03'} title="School List" icon={<GraduationCap size={16} />}>
-          <SchoolChart schools={strategy.schools} adjustments={adjustments} />
+          {v2
+            ? <BandChart evaluations={v2.evaluations} />
+            : <SchoolChart schools={strategy.schools} adjustments={adjustments} />}
           <div className="border-t border-[var(--line)] mt-4 pt-4 flex flex-col gap-3">
             {([
               ['reach', 'Reach', strategy.schools.reach, Rocket, 'text-red-500', 'text-red-700 bg-red-50 border-red-100'],
@@ -702,31 +1116,77 @@ export default function StrategyPage() {
                 <div className="flex flex-col gap-2">
                   {list.map(s => {
                     const delta = Math.round(adjustments[s.name] ?? 0);
+                    const ev = v2?.evaluations.find(e => e.short === s.name || e.schoolName === s.name);
                     return (
                       <div key={s.name} className="rounded-lg border border-[var(--line)] bg-[var(--bg-soft)] px-3.5 py-2.5">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[13px] font-semibold text-[var(--ink)]">{s.name}</span>
+                        <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                          {ev ? (
+                            <Link href={`/students/${studentId}/schools/${ev.schoolId}`} className="text-[13px] font-semibold text-[var(--ink)] hover:text-[var(--accent)] hover:underline transition-colors">
+                              {s.name}
+                            </Link>
+                          ) : (
+                            <span className="text-[13px] font-semibold text-[var(--ink)]">{s.name}</span>
+                          )}
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[12px] font-bold" style={{ color: 'var(--accent)' }}>{s.chance}</span>
-                            {delta > 0 && <span className="text-[10px] font-bold text-emerald-500">+{delta}pp</span>}
+                            {ev ? (
+                              <TierRangeBadge ev={ev} />
+                            ) : (
+                              <span className="text-[12px] font-bold" style={{ color: 'var(--accent)' }}>{s.chance}</span>
+                            )}
+                            {!v2 && delta > 0 && <span className="text-[10px] font-bold text-emerald-500">+{delta}pp</span>}
                           </div>
                         </div>
                         {s.note && <p className="text-[12px] text-[var(--ink-soft)] leading-relaxed">{s.note}</p>}
+                        {ev && <TraceDisclosure ev={ev} />}
                       </div>
                     );
                   })}
                 </div>
               </div>
             ))}
+
+            {/* Engine-suggested additions (not on the student's list) */}
+            {v2 && (v2.suggestions?.length ?? 0) > 0 && (
+              <div className="mt-1 rounded-lg border border-dashed border-[var(--accent-100)] bg-[var(--accent-50)]/40 p-3.5">
+                <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-widest text-[var(--accent)] mb-1">
+                  <Plus size={11} /> Suggested Additions
+                </div>
+                <p className="text-[11.5px] text-[var(--muted)] mb-2.5">
+                  Not on this student&apos;s list — the engine proposes these to patch coverage gaps. Discuss with the family before adding.
+                </p>
+                <div className="flex flex-col gap-2">
+                  {v2.suggestions!.map(ev => (
+                    <div key={ev.schoolId} className="rounded-lg border border-[var(--line)] bg-white px-3.5 py-2.5">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <Link href={`/students/${studentId}/schools/${ev.schoolId}`} className="text-[13px] font-semibold text-[var(--ink)] hover:text-[var(--accent)] hover:underline transition-colors">
+                          {ev.short}
+                        </Link>
+                        <TierRangeBadge ev={ev} />
+                      </div>
+                      <TraceDisclosure ev={ev} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </StratCard>
 
         {/* 05 Strategy */}
         <StratCard num={strategy.analysis ? '05' : '04'} title="Application Strategy" icon={<Lightbulb size={16} />}>
-          <div className="grid grid-cols-2 gap-4">
-            <EdEaPlan text={strategy.strategy.ed_ea} />
-            <NarrativeCard text={strategy.strategy.narrative} />
-          </div>
+          {v2 ? (
+            <div className="flex flex-col gap-5">
+              <EarlyDecisionMatrix v2={v2} student={student} edEaText={strategy.strategy.ed_ea} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <NarrativeCard text={strategy.strategy.narrative} />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <EdEaPlan text={strategy.strategy.ed_ea} />
+              <NarrativeCard text={strategy.strategy.narrative} />
+            </div>
+          )}
         </StratCard>
 
         {/* 06 Plan */}
@@ -1001,3 +1461,4 @@ function StratCard({ num, title, icon, children }: { num: string; title: string;
     </div>
   );
 }
+

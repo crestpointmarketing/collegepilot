@@ -49,10 +49,13 @@ describe('Ethan Li final Grade-11 transcript', () => {
     const upgraded = upgradeSampleStudentProfile(oldEthan);
     const unrelated = SAMPLE_STUDENTS.find(student => student.id === 's1')!;
 
-    expect(upgraded.sampleProfileRevision).toBe('2026-07-16-experience-projects');
+    expect(upgraded.sampleProfileRevision).toBe('2026-07-17-online-presence-links');
     expect(upgraded.activities).toHaveLength(10);
     expect(upgraded.projects).toHaveLength(5);
     expect(upgraded.status).toBe('Draft');
+    expect(upgraded.websiteUrl).toBe('https://www.ethanli.ai');
+    expect(upgraded.githubUrl).toBe('https://github.com/3than777');
+    expect(upgraded.projects?.every(project => project.links?.every(link => link.url.startsWith('https://')))).toBe(true);
     expect(upgradeSampleStudentProfile({ ...oldEthan, status: 'Strategy Generated' }).status).toBe('Needs Review');
     expect(upgradeSampleStudentProfile(unrelated)).toBe(unrelated);
   });

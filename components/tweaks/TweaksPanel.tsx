@@ -75,12 +75,6 @@ export function TweaksPanel() {
                 <div className="text-[12px] font-semibold text-[var(--ink)] mb-3 pb-2 border-b border-[var(--line)]">Layout</div>
                 <div className="flex flex-col gap-4">
                   <TweakRadio
-                    label="Navigation"
-                    value={tweaks.nav}
-                    options={[{ value: 'top', label: 'Top' }, { value: 'sidebar', label: 'Sidebar' }]}
-                    onChange={v => setTweak('nav', v as Tweaks['nav'])}
-                  />
-                  <TweakRadio
                     label="Density"
                     value={tweaks.density}
                     options={[{ value: 'comfortable', label: 'Comfy' }, { value: 'compact', label: 'Compact' }]}

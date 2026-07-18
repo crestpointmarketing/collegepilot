@@ -26,11 +26,11 @@ export const COMMON_APP_CATEGORIES = [
 ];
 
 export const LOADING_STEPS = [
-  'Parsing applicant profile',
-  'Cross-referencing peer admit cohorts',
-  'Modeling Reach / Match / Safety probabilities',
-  'Drafting positioning narrative',
-  'Building month-by-month execution plan',
+  'Reading the full applicant file',
+  'Grading 10 profile dimensions with cited evidence',
+  'Running the calibration engine across the school database',
+  'Checking portfolio coverage and shutout risk',
+  'Writing the counselor report and execution plan',
 ];
 
 export const SAMPLE_STUDENTS: Student[] = [
@@ -79,6 +79,8 @@ export const SAMPLE_STUDENTS: Student[] = [
     targetRange: 'Top 10',
     risk: 'Balanced',
     preferred: 'MIT, Stanford, CMU, Caltech',
+    websiteUrl: 'https://www.ethanli.ai',
+    githubUrl: 'https://github.com/3than777',
     traits: 'AI systems builder spanning speech technology, real-time human-AI interaction, financial reasoning, multi-agent marketing operations, production inference infrastructure, and real-world robot manipulation. Built and evaluated end-to-end systems from data collection through deployment.',
     angles: 'Unusually broad systems depth across software and embodied AI: award-winning speech research, production SaaS and inference work, VLA robot learning with measured generalization results, and USACO Gold competitive programming.',
     color: '#0ea5e9',
@@ -258,7 +260,9 @@ export const SAMPLE_STUDENTS: Student[] = [
         level: 'Regional',
       },
     ],
-    sampleProfileRevision: '2026-07-16-experience-projects',
+    sampleProfileRevision: '2026-07-17-online-presence-links',
+    seniorCourses: 'Multivariable Calculus (planned); continued CS/AI systems coursework',
+    additionalInformation: 'Certifications: Full-Stack Web Development Certificate (UT Austin); CS50 Introduction to Computer Science (Harvard); Introduction to Java, Grade A (Johns Hopkins CTY); Prompt Engineering Bootcamp (Udemy). Portfolio site with per-project write-ups and demo videos at ethanli.ai.',
     projects: [
       {
         id: 'p1',
@@ -269,6 +273,9 @@ export const SAMPLE_STUDENTS: Student[] = [
         outcome: '46% fluency improvement with semantic fidelity preserved; 1st Place + Jay Ingram Award at HPHS SciTech Fair; Top 4 / Honorable Mention at DRSEF',
         affiliation: 'Highland Park High School — Independent Research',
         impact: 'Low-cost speech-language pathologist augmentation targeting pediatric speech accessibility.',
+        links: [
+          { type: 'website', url: 'https://www.ethanli.ai/projects/speakwise', label: 'Project page + demo video' },
+        ],
       },
       {
         id: 'p2',
@@ -280,6 +287,9 @@ export const SAMPLE_STUDENTS: Student[] = [
         affiliation: 'PomeloLabs',
         impact: 'Measures brand visibility across ChatGPT, Claude, Gemini, and Perplexity, then generates content to close GEO visibility gaps.',
         period: '2026–Present',
+        links: [
+          { type: 'website', url: 'https://www.ethanli.ai/projects/pomelo-labs', label: 'Project page' },
+        ],
       },
       {
         id: 'p3',
@@ -291,6 +301,9 @@ export const SAMPLE_STUDENTS: Student[] = [
         affiliation: 'UT Dallas STEM Bridge — Intelligent Robotics and Vision Lab (IRVL)',
         impact: 'Demonstrated how diverse training environments improve VLA generalization across lighting and background changes.',
         period: 'Summer 2026',
+        links: [
+          { type: 'website', url: 'https://www.ethanli.ai/projects/vla-robot-manipulation', label: 'Research page with demo & results' },
+        ],
       },
       {
         id: 'p4',
@@ -302,6 +315,9 @@ export const SAMPLE_STUDENTS: Student[] = [
         affiliation: 'Elocutionist — Internship Project',
         impact: 'Turns model output into actionable interview feedback across multiple interview formats.',
         period: '2025–2026',
+        links: [
+          { type: 'website', url: 'https://www.ethanli.ai/projects/elocutionist', label: 'Project page' },
+        ],
       },
       {
         id: 'p5',
@@ -313,6 +329,9 @@ export const SAMPLE_STUDENTS: Student[] = [
         affiliation: 'Independent Project',
         impact: 'Explores confidence-aware AI reasoning in a structured, uncertainty-heavy financial domain.',
         period: '2024–2025',
+        links: [
+          { type: 'website', url: 'https://www.ethanli.ai/projects/zeitgeist', label: 'Project page' },
+        ],
       },
     ],
     whyMajorEvidence: 'Built production AI infrastructure, interview and financial reasoning systems, multi-agent SaaS, award-winning speech technology, and a real-robot VLA research pipeline; these experiences connect computer science theory to measurable real-world system behavior.',
@@ -529,8 +548,13 @@ export function upgradeSampleStudentProfile(student: Student): Student {
     traits: sample.traits,
     angles: sample.angles,
     activities: sample.activities.map(activity => ({ ...activity, grades: [...activity.grades] })),
-    projects: sample.projects?.map(project => ({ ...project })),
+    projects: sample.projects?.map(project => ({ ...project, links: project.links?.map(l => ({ ...l })) })),
     whyMajorEvidence: sample.whyMajorEvidence,
+    websiteUrl: sample.websiteUrl ?? student.websiteUrl,
+    linkedinUrl: sample.linkedinUrl ?? student.linkedinUrl,
+    githubUrl: sample.githubUrl ?? student.githubUrl,
+    seniorCourses: sample.seniorCourses ?? student.seniorCourses,
+    additionalInformation: sample.additionalInformation ?? student.additionalInformation,
   };
 }
 

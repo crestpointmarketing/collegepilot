@@ -7,6 +7,7 @@ import { SAMPLE_STUDENTS, INITIAL_STRATEGIES, TWEAK_DEFAULTS, ACCENT_PALETTES, u
 import { SCHOOLS } from '@/lib/schools';
 import { createClient } from '@/lib/supabase';
 import { strategySchema } from '@/lib/schemas';
+import { stableEquals } from '@/lib/stableStringify';
 
 interface AppContextValue {
   students: Student[];
@@ -29,19 +30,10 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-  if (value && typeof value === 'object') {
-    const object = value as Record<string, unknown>;
-    return `{${Object.keys(object).sort().map(key => `${JSON.stringify(key)}:${stableStringify(object[key])}`).join(',')}}`;
-  }
-  return JSON.stringify(value) ?? 'undefined';
-}
-
 function isUnmodifiedSampleStudent(student: Student) {
   const sample = SAMPLE_STUDENTS.find(s => s.id === student.id);
   if (!sample) return false;
-  return stableStringify(student) === stableStringify(sample);
+  return stableEquals(student, sample);
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -161,7 +153,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           student &&
           !isUnmodifiedSampleStudent(student) &&
           INITIAL_STRATEGIES[r.student_id] &&
-          JSON.stringify(r.data) === JSON.stringify(INITIAL_STRATEGIES[r.student_id]);
+          stableEquals(r.data, INITIAL_STRATEGIES[r.student_id]);
         if (student?.status === 'Strategy Generated' || student?.status === 'Document Ready') {
           const parsed = strategySchema.safeParse(r.data);
           if (!isStaleInitialStrategy && parsed.success) {

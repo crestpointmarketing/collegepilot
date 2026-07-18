@@ -213,11 +213,11 @@ function cleanText(value: unknown): string {
   if (value === null || value === undefined) return '';
   return String(value)
     .replace(/\\n/g, '\n')
-    .replace(/â€¦/g, '...')
-    .replace(/â€”/g, '-')
-    .replace(/â€“/g, '-')
-    .replace(/â€™/g, "'")
-    .replace(/â€œ|â€/g, '"')
+    .replace(/…/g, '...')
+    .replace(/—/g, '-')
+    .replace(/–/g, '-')
+    .replace(/’/g, "'")
+    .replace(/“|â€/g, '"')
     .replace(/\*\*/g, '')
     .replace(/\[[0-9]+\]/g, '')
     .replace(/\s+\n/g, '\n')
@@ -237,7 +237,7 @@ function splitFormattedText(value: unknown): string[] {
 function getLeadText(value: unknown, fallback: string) {
   const first = splitFormattedText(value)[0] ?? cleanText(value);
   if (!first) return fallback;
-  const normalized = first.replace(/^[-â€¢]\s*/, '').replace(/^[0-9]+[.)]\s*/, '');
+  const normalized = first.replace(/^[-•]\s*/, '').replace(/^[0-9]+[.)]\s*/, '');
   return normalized.length > 150 ? `${normalized.slice(0, 147).trim()}...` : normalized;
 }
 

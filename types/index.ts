@@ -15,6 +15,15 @@ export interface Course {
   notes?: string;
 }
 
+export type ProjectLinkType = 'github' | 'video' | 'paper' | 'website' | 'other';
+
+/** Verifiable artifact attached to a project — the anchor an AO could actually check. */
+export interface ProjectLink {
+  type: ProjectLinkType;
+  url: string;
+  label?: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -25,6 +34,7 @@ export interface Project {
   affiliation?: string; // "MIT PRIMES", "Stanford OHS", "Independent"
   impact?: string;
   period?: string;
+  links?: ProjectLink[];
 }
 
 export interface Activity {
@@ -101,6 +111,10 @@ export interface Student {
   sampleProfileRevision?: string;
   courses?: Course[];
   projects?: Project[];
+  // Online presence (optional — verifiable anchors for the assessment layer)
+  websiteUrl?: string;
+  linkedinUrl?: string;
+  githubUrl?: string;
   // Application context and preferences (optional — never infer sensitive data)
   residencyStatus?: string;
   stateResidency?: string;
@@ -115,6 +129,12 @@ export interface Student {
   additionalInformation?: string;
   whyMajorEvidence?: string;
   recommenderPlan?: string;
+  /** Structured picks from the school database (max 20). Falls back to name-matching `preferred` when absent. */
+  preferredSchoolIds?: string[];
+  /** Acceptability test: schools the student would NOT actually attend if admitted (a "safety" here is not a real safety). */
+  notAttendIds?: string[];
+  /** Timeline task completion, keyed by derived task id. Stored with the student — no separate table needed. */
+  timelineChecks?: Record<string, boolean>;
   preferredRegions?: string[];
   excludedRegions?: string[];
   preferredSettings?: string[];
@@ -127,6 +147,86 @@ export interface SchoolEntry {
   name: string;
   chance: string;
   note: string;
+}
+
+export interface StrategyLever {
+  action: string;
+  dimension: string;
+  deadline: string;
+  expected_effect: string;
+  /** Artifact that proves completion (mentor letter, public repo, score report…). */
+  evidence_required?: string;
+  /** Application material this action feeds (activities list, Why Major essay…). */
+  material_served?: string;
+  rationale: string;
+}
+
+/**
+ * V2 payload: full audit trail from the deterministic admissions engine.
+ * Typed loosely here to keep this file dependency-free; the authoritative
+ * shapes live in lib/admissions/.
+ */
+export interface StrategyV2 {
+  version: 2;
+  generatedAt: string;
+  /** Admission cycle the school data describes, e.g. "2025-26". */
+  dataCycle?: string;
+  /** Rules-engine version that produced these numbers. */
+  engineVersion?: string;
+  assessment: {
+    dimensions: Record<string, {
+      tier: string;
+      evidence: string[];
+      missing: string[];
+      risks: string[];
+      verifiability: string;
+      confidence: string;
+      reader_interpretation?: string;
+      overstatement_risk?: string;
+    }>;
+    spike: { has_spike: boolean; domain: string; summary: string };
+    profile_read: string;
+    key_risks: string[];
+    assessment_confidence: string;
+    assessment_gaps: string[];
+  };
+  evaluations: Array<{
+    schoolId: string;
+    schoolName: string;
+    short: string;
+    ranking: number;
+    tier: string;
+    tierLabel: string;
+    band: { min: number; max: number };
+    uiBucket: 'reach' | 'match' | 'safety';
+    baseTier: string;
+    baseRateUsed: { pct: number; scope: 'institution' | 'major' };
+    ceiling: string;
+    ceilingReason: string;
+    trace: Array<{
+      ruleId: string;
+      label: string;
+      stepDelta: number;
+      rationale: string;
+      basis: string;
+      confidence: string;
+    }>;
+    dataConfidence: string;
+    assessmentConfidence: string;
+    flags: string[];
+    unknowns?: string[];
+  }>;
+  /** Engine-proposed additions to patch coverage gaps — not on the student's own list. */
+  suggestions?: StrategyV2['evaluations'];
+  portfolio: {
+    pAtLeastOne: { lowerPct: number; upperPct: number; note: string };
+    coverage: { reach: number; match: number; safety: number };
+    shutoutRisk: 'low' | 'moderate' | 'high' | 'critical';
+    warnings: string[];
+    competitivenessLevels: { top10: string; top20: string; top50: string };
+    unmatchedPreferred?: string[];
+  };
+  levers: StrategyLever[];
 }
 
 export interface Strategy {
@@ -163,6 +263,7 @@ export interface Strategy {
     assessment: string;
     improvement_levers: string[];
   };
+  v2?: StrategyV2;
 }
 
 export interface School {

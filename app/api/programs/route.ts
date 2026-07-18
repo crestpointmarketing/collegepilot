@@ -163,7 +163,7 @@ function extractProgramsLocally(pages: FirecrawlSearchResult[]): ProgramEntry[] 
     const text = [page.description ?? '', page.markdown ?? ''].join('\n');
 
     {
-    const descriptionParts = (page.description ?? '').split(/[Â·â€¢;|]/);
+    const descriptionParts = (page.description ?? '').split(/[·•;|]/);
     for (const part of descriptionParts) {
       addProgramCandidate(entries, seen, part, page, 'High');
     }

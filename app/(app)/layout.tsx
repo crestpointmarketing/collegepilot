@@ -3,13 +3,12 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { TopNav } from '@/components/layout/TopNav';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TweaksPanel } from '@/components/tweaks/TweaksPanel';
 import { ChatBot } from '@/components/chat/ChatBot';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { tweaks, loading, user } = useApp();
+  const { loading, user } = useApp();
   const router = useRouter();
 
   // Auth guard: the workspace is meaningless without a session (all writes
@@ -29,26 +28,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (tweaks.nav === 'sidebar') {
-    return (
-      <div className="flex h-full min-h-screen">
-        <Sidebar />
-        <div className="flex-1 overflow-y-auto" data-scroll>
-          <main className="px-8 pt-8 pb-36 max-w-[1200px] mx-auto">
-            {children}
-          </main>
-        </div>
-        <TweaksPanel />
-        <ChatBot />
-      </div>
-    );
-  }
-
+  // Sidebar is the app's navigation model (dashboard-style shell).
   return (
-    <div className="flex flex-col h-full min-h-screen">
-      <TopNav />
+    <div className="flex h-full min-h-screen">
+      <Sidebar />
       <div className="flex-1 overflow-y-auto" data-scroll>
-        <main className="px-8 pt-8 pb-36 max-w-[1200px] mx-auto">
+        <main className="px-8 pt-8 pb-36 max-w-[1280px] mx-auto">
           {children}
         </main>
       </div>

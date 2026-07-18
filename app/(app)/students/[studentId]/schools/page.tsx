@@ -7,6 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { fitScore, tierFor } from '@/lib/schools';
 import { TierBadge } from '@/components/shared/TierBadge';
 import { FitBar } from '@/components/shared/FitBar';
+import { PortfolioPanel } from '@/components/portfolio/PortfolioPanel';
 import type { School, SchoolEntry, Strategy } from '@/types';
 
 const ALL_REGIONS = ['West', 'East', 'Midwest', 'South'] as const;
@@ -34,10 +35,24 @@ function ChipBtn({ label, active, onClick }: { label: string; active: boolean; o
 export default function SchoolsPage() {
   const params = useParams();
   const studentId = params.studentId as string;
-  const { students, schools, strategies, saveStrategy } = useApp();
+  const { students, schools, strategies, saveStrategy, saveStudentDraft } = useApp();
   const activeStudent = students.find(s => s.id === studentId) ?? null;
   const currentStrategy = strategies[studentId] ?? null;
   const [saveMessage, setSaveMessage] = useState('');
+  const [togglingAttend, setTogglingAttend] = useState(false);
+
+  // Acceptability test: mark a school the student would NOT actually attend.
+  const handleToggleAttend = async (schoolId: string) => {
+    if (!activeStudent || togglingAttend) return;
+    const current = activeStudent.notAttendIds ?? [];
+    const next = current.includes(schoolId) ? current.filter(id => id !== schoolId) : [...current, schoolId];
+    setTogglingAttend(true);
+    try {
+      await saveStudentDraft({ ...activeStudent, notAttendIds: next });
+    } finally {
+      setTogglingAttend(false);
+    }
+  };
 
   // Fit scores are only meaningful against the real student's numbers
   const profile = {
@@ -142,8 +157,20 @@ export default function SchoolsPage() {
 
   if (!activeStudent) return <div className="text-[var(--muted)]">Student not found.</div>;
 
+  const v2 = currentStrategy?.v2 ?? null;
+
   return (
     <div className="animate-fade-in">
+      {/* Portfolio analysis of the student's own list (when a v2 strategy exists) */}
+      {v2 && (
+        <PortfolioPanel
+          student={activeStudent}
+          v2={v2}
+          saving={togglingAttend}
+          onToggleAttend={handleToggleAttend}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
