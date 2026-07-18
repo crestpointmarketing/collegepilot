@@ -50,7 +50,7 @@ describe('Ethan Li final Grade-11 transcript', () => {
     const upgraded = upgradeSampleStudentProfile(oldEthan);
     const unrelated = SAMPLE_STUDENTS.find(student => student.id === 's1')!;
 
-    expect(upgraded.sampleProfileRevision).toBe('2026-07-18-internship-timing');
+    expect(upgraded.sampleProfileRevision).toBe('2026-07-18-project-hierarchy');
     expect(upgraded.awards.some(a => a.title.includes('VLA Research Project, 3rd Place'))).toBe(true);
     expect(upgraded.activities).toHaveLength(10);
     expect(upgraded.projects).toHaveLength(5);
