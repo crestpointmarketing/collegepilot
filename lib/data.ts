@@ -161,11 +161,11 @@ export const SAMPLE_STUDENTS: Student[] = [
         position: 'AI Systems / AI Infrastructure Intern',
         org: 'OneSource Cloud',
         desc: 'Benchmarked AI models and deployments; studied GPU utilization, latency, throughput, quantization, and efficient production inference.',
-        grades: [11, 12],
-        timing: 'School Year, Summer',
+        grades: [11],
+        timing: 'School Break',
         hours: '',
         weeks: '',
-        period: 'Summer 2025–Present',
+        period: 'Summer 2025',
       },
       {
         id: 'a8',
@@ -266,7 +266,7 @@ export const SAMPLE_STUDENTS: Student[] = [
         level: 'Regional',
       },
     ],
-    sampleProfileRevision: '2026-07-18-vla-award-certificates',
+    sampleProfileRevision: '2026-07-18-internship-timing',
     seniorCourses: 'Multivariable Calculus (planned); continued CS/AI systems coursework',
     additionalInformation: 'Certifications: Full-Stack Web Development Certificate (UT Austin); CS50 Introduction to Computer Science (Harvard); Introduction to Java, Grade A (Johns Hopkins CTY); Prompt Engineering Bootcamp (Udemy). UT Dallas STEM Bridge: program completion certificate and 3rd-place project award certificate; research poster and recorded results presentation available. Portfolio site with per-project write-ups and demo videos at ethanli.ai.',
     projects: [

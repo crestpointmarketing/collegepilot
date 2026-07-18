@@ -38,7 +38,7 @@ describe('Ethan Li final Grade-11 transcript', () => {
       'Zeitgeist (Independent Project)',
     ]));
     expect(ethan?.activities.every(activity => activity.desc.length <= CHAR_LIMITS.activityDesc)).toBe(true);
-    expect(ethan?.activities.find(activity => activity.org === 'OneSource Cloud')?.period).toBe('Summer 2025–Present');
+    expect(ethan?.activities.find(activity => activity.org === 'OneSource Cloud')?.period).toBe('Summer 2025');
     expect(ethan?.projects?.map(project => project.id)).toEqual(['p1', 'p2', 'p3', 'p4', 'p5']);
     expect(ethan?.projects?.find(project => project.id === 'p3')?.outcome).toContain('80% success');
     expect(ethan?.projects?.find(project => project.id === 'p3')?.period).toBe('Summer 2026 — 6-week structured summer research program');
@@ -50,7 +50,7 @@ describe('Ethan Li final Grade-11 transcript', () => {
     const upgraded = upgradeSampleStudentProfile(oldEthan);
     const unrelated = SAMPLE_STUDENTS.find(student => student.id === 's1')!;
 
-    expect(upgraded.sampleProfileRevision).toBe('2026-07-18-vla-award-certificates');
+    expect(upgraded.sampleProfileRevision).toBe('2026-07-18-internship-timing');
     expect(upgraded.awards.some(a => a.title.includes('VLA Research Project, 3rd Place'))).toBe(true);
     expect(upgraded.activities).toHaveLength(10);
     expect(upgraded.projects).toHaveLength(5);
