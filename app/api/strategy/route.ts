@@ -22,6 +22,7 @@ import { SCHOOLS } from '@/lib/schools';
 import { createServerSupabaseClient } from '@/lib/supabase.server';
 import { checkRateLimit, rateLimitMessage } from '@/lib/rateLimit';
 import { stableEquals } from '@/lib/stableStringify';
+import { deriveTimelineTasks } from '@/lib/timelineTasks';
 import type { Strategy, Student } from '@/types';
 import { z } from 'zod';
 
@@ -152,6 +153,7 @@ function assembleStrategy(
       suggestions: engine.suggestions,
       portfolio,
       levers: narrative.levers,
+      planTasks: deriveTimelineTasks(narrative.plan),
     },
   };
 }

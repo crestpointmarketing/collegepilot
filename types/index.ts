@@ -133,6 +133,8 @@ export interface Student {
   preferredSchoolIds?: string[];
   /** Acceptability test: schools the student would NOT actually attend if admitted (a "safety" here is not a real safety). */
   notAttendIds?: string[];
+  /** The school (id) the student plans to apply ED/binding-early to, if decided. */
+  edChoiceId?: string;
   /** Timeline task completion, keyed by derived task id. Stored with the student — no separate table needed. */
   timelineChecks?: Record<string, boolean>;
   preferredRegions?: string[];
@@ -161,10 +163,18 @@ export interface StrategyLever {
   rationale: string;
 }
 
+/** A single execution-plan task with a generation-time stable id (content hash). */
+export interface PlanTask {
+  id: string;
+  month: string;
+  text: string;
+  material: string;
+}
+
 /**
  * V2 payload: full audit trail from the deterministic admissions engine.
- * Typed loosely here to keep this file dependency-free; the authoritative
- * shapes live in lib/admissions/.
+ * Shapes come straight from lib/admissions (type-only imports) so the stored
+ * payload can never silently drift from what the engine produces.
  */
 export interface StrategyV2 {
   version: 2;
@@ -173,60 +183,14 @@ export interface StrategyV2 {
   dataCycle?: string;
   /** Rules-engine version that produced these numbers. */
   engineVersion?: string;
-  assessment: {
-    dimensions: Record<string, {
-      tier: string;
-      evidence: string[];
-      missing: string[];
-      risks: string[];
-      verifiability: string;
-      confidence: string;
-      reader_interpretation?: string;
-      overstatement_risk?: string;
-    }>;
-    spike: { has_spike: boolean; domain: string; summary: string };
-    profile_read: string;
-    key_risks: string[];
-    assessment_confidence: string;
-    assessment_gaps: string[];
-  };
-  evaluations: Array<{
-    schoolId: string;
-    schoolName: string;
-    short: string;
-    ranking: number;
-    tier: string;
-    tierLabel: string;
-    band: { min: number; max: number };
-    uiBucket: 'reach' | 'match' | 'safety';
-    baseTier: string;
-    baseRateUsed: { pct: number; scope: 'institution' | 'major' };
-    ceiling: string;
-    ceilingReason: string;
-    trace: Array<{
-      ruleId: string;
-      label: string;
-      stepDelta: number;
-      rationale: string;
-      basis: string;
-      confidence: string;
-    }>;
-    dataConfidence: string;
-    assessmentConfidence: string;
-    flags: string[];
-    unknowns?: string[];
-  }>;
+  assessment: import('@/lib/admissions/assessment').ProfileAssessment;
+  evaluations: import('@/lib/admissions/engine').SchoolEvaluation[];
   /** Engine-proposed additions to patch coverage gaps — not on the student's own list. */
-  suggestions?: StrategyV2['evaluations'];
-  portfolio: {
-    pAtLeastOne: { lowerPct: number; upperPct: number; note: string };
-    coverage: { reach: number; match: number; safety: number };
-    shutoutRisk: 'low' | 'moderate' | 'high' | 'critical';
-    warnings: string[];
-    competitivenessLevels: { top10: string; top20: string; top50: string };
-    unmatchedPreferred?: string[];
-  };
+  suggestions?: import('@/lib/admissions/engine').SchoolEvaluation[];
+  portfolio: import('@/lib/admissions/engine').PortfolioSummary;
   levers: StrategyLever[];
+  /** Stable-id task list derived from `plan` at generation time. */
+  planTasks?: PlanTask[];
 }
 
 export interface Strategy {

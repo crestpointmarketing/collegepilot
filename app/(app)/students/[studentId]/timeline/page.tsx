@@ -8,9 +8,10 @@ import {
   FileText, Users, PenLine, GraduationCap, Banknote, Send, FolderCheck, ListChecks,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
-import type { Strategy, Student } from '@/types';
+import { TASK_MATERIALS, deriveTimelineTasks, parsePlanMonth } from '@/lib/timelineTasks';
+import type { Student } from '@/types';
 
-/* ── Task derivation (deterministic from the strategy plan) ── */
+/* ── Task derivation (stable content-hash ids, shared with the route) ── */
 
 interface DerivedTask {
   id: string;
@@ -20,42 +21,17 @@ interface DerivedTask {
   material: string;
 }
 
-const MATERIALS: { key: string; label: string; Icon: typeof FileText; test: RegExp }[] = [
-  { key: 'personal_statement', label: 'Personal Statement', Icon: PenLine, test: /personal statement|main essay|common app essay/i },
-  { key: 'supplements', label: 'Supplemental Essays', Icon: FileText, test: /supplement|why (major|school|us)|school-specific essay/i },
-  { key: 'recommendations', label: 'Recommendations', Icon: Users, test: /recommend|rec letter|counselor letter|teacher/i },
-  { key: 'testing', label: 'Testing & Transcript', Icon: GraduationCap, test: /\bsat\b|\bact\b|score|transcript|registrar|endorsement/i },
-  { key: 'financial', label: 'Financial Aid', Icon: Banknote, test: /fafsa|css|financial|aid|net price|scholarship/i },
-  { key: 'submission', label: 'Submission & QA', Icon: Send, test: /submit|proofread|qa|final review|deadline|application fee/i },
-  { key: 'evidence', label: 'Profile & Evidence', Icon: FolderCheck, test: /verif|demo|github|portfolio|project|link|evidence|documentation/i },
-];
+const MATERIAL_ICONS: Record<string, typeof FileText> = {
+  personal_statement: PenLine,
+  supplements: FileText,
+  recommendations: Users,
+  testing: GraduationCap,
+  financial: Banknote,
+  submission: Send,
+  evidence: FolderCheck,
+};
 
-function classifyMaterial(text: string): string {
-  for (const m of MATERIALS) if (m.test.test(text)) return m.key;
-  return 'evidence';
-}
-
-// Match by 3-letter prefix so "Nov 2026", "Sept 2026" and "November 2026" all parse.
-const MONTH_PREFIXES = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-
-function parseMonth(label: string): Date | null {
-  const m = label.toLowerCase().match(new RegExp(`\\b(${MONTH_PREFIXES.join('|')})[a-z]*\\.?\\s+(\\d{4})`));
-  if (!m) return null;
-  return new Date(parseInt(m[2]), MONTH_PREFIXES.indexOf(m[1]), 1);
-}
-
-function deriveTasks(plan: Strategy['plan']): DerivedTask[] {
-  return plan.flatMap(row => {
-    const parts = row.tasks.split(/(?<=[.;])\s+/).map(s => s.trim()).filter(s => s.length > 4);
-    return parts.map((text, ti) => ({
-      id: `${row.month}::${ti}`,
-      month: row.month,
-      monthDate: parseMonth(row.month),
-      text: text.replace(/[;.]$/, '.'),
-      material: classifyMaterial(text),
-    }));
-  });
-}
+const MATERIALS = TASK_MATERIALS.map(m => ({ ...m, Icon: MATERIAL_ICONS[m.key] ?? FolderCheck }));
 
 /* ── Page ─────────────────────────────────────────────────── */
 
@@ -67,7 +43,13 @@ export default function TimelinePage() {
   const strategy = strategies[studentId] ?? null;
   const [saving, setSaving] = useState(false);
 
-  const tasks = useMemo(() => (strategy ? deriveTasks(strategy.plan) : []), [strategy]);
+  // Prefer the generation-time stable-id tasks; older strategies fall back to
+  // the identical derivation (same lib → same content-hash ids).
+  const tasks = useMemo((): DerivedTask[] => {
+    if (!strategy) return [];
+    const source = strategy.v2?.planTasks ?? deriveTimelineTasks(strategy.plan);
+    return source.map(t => ({ ...t, monthDate: parsePlanMonth(t.month) }));
+  }, [strategy]);
 
   if (!student) return <div className="text-[var(--muted)]">Student not found.</div>;
 

@@ -246,6 +246,61 @@ describe('very likely gate', () => {
   });
 });
 
+/* ── ED commitment (round-aware leverage) ─────────────────── */
+
+describe('ed commitment', () => {
+  it('grants one bounded step for a committed ED at a high-leverage school, still under the selectivity ceiling', () => {
+    const noEd = evaluate(makeStudent({ major: 'History' }), 'columbia');
+    const withEd = evaluate(makeStudent({ major: 'History', edChoiceId: 'columbia' }), 'columbia');
+    expect(withEd.trace.find(t => t.ruleId === 'ed_commitment')?.stepDelta).toBe(1);
+    expect(withEd.flags).toContain('ed_committed');
+    expect(tierIndex(withEd.tier)).toBeGreaterThanOrEqual(tierIndex(noEd.tier));
+    // Columbia is sub-8% — even committed ED can never beat the Reach ceiling
+    expect(tierIndex(withEd.tier)).toBeLessThanOrEqual(tierIndex('reach'));
+  });
+
+  it('gives no step for a committed early round with limited leverage', () => {
+    const ev = evaluate(makeStudent({ major: 'History', edChoiceId: 'mit' }), 'mit');
+    expect(ev.trace.find(t => t.ruleId === 'ed_commitment')).toBeUndefined();
+    expect(ev.trace.find(t => t.ruleId === 'ed_commitment_limited')?.stepDelta).toBe(0);
+  });
+
+  it('does not apply the ED step at schools other than the committed one', () => {
+    const ev = evaluate(makeStudent({ major: 'History', edChoiceId: 'columbia' }), 'duke');
+    expect(ev.trace.find(t => t.ruleId === 'ed_commitment')).toBeUndefined();
+    expect(ev.trace.find(t => t.ruleId === 'ed_opportunity')).toBeTruthy();
+  });
+
+  it('quotes the reported ED-pool rate as biased context in the rationale', () => {
+    const ev = evaluate(makeStudent({ major: 'History', edChoiceId: 'upenn' }), 'upenn');
+    const rec = ev.trace.find(t => t.ruleId === 'ed_commitment');
+    expect(rec?.rationale).toMatch(/ED-pool rate ~15%.*hook-biased/);
+  });
+});
+
+/* ── Stable timeline task ids ─────────────────────────────── */
+
+describe('timeline task ids', () => {
+  it('keeps ids stable across plan reordering and unrelated edits', async () => {
+    const { deriveTimelineTasks } = await import('../timelineTasks');
+    const planA = [
+      { month: 'August 2026', tasks: 'Draft the personal statement. Ask two teachers for recommendations.' },
+      { month: 'September 2026', tasks: 'Submit SAT scores.' },
+    ];
+    const planB = [
+      { month: 'September 2026', tasks: 'Submit SAT scores. Book campus visits.' },
+      { month: 'August 2026', tasks: 'Draft the personal statement. Ask two teachers for recommendations.' },
+    ];
+    const idsA = new Map(deriveTimelineTasks(planA).map(t => [t.text, t.id]));
+    const idsB = new Map(deriveTimelineTasks(planB).map(t => [t.text, t.id]));
+    for (const [text, id] of idsA) {
+      expect(idsB.get(text)).toBe(id);
+    }
+    // New task gets a new id; duplicates are disambiguated deterministically
+    expect(idsB.get('Book campus visits.')).toBeTruthy();
+  });
+});
+
 /* ── Single-count principle ───────────────────────────────── */
 
 describe('single-count principle', () => {

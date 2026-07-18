@@ -435,16 +435,49 @@ export function evaluateSchool(
     });
   }
 
-  /* 9. Early-round leverage — informational only in Phase 1 (no automatic bump). */
-  if (facts?.edStrategicValue && facts.edStrategicValue.value === 'high_leverage') {
+  /* 9. Early-round leverage. A COMMITTED ED choice at a high-leverage school
+   * earns one bounded tier step (still under all ceilings); an uncommitted
+   * opportunity stays informational. Published ED-pool rates are quoted as
+   * context, never used as the applicant's probability — the pool is
+   * hook-biased. */
+  const plansEdHere = student.edChoiceId === school.id;
+  const edGrade = facts?.edStrategicValue?.value;
+  const edRateNote = facts?.edAdmitRatePct
+    ? ` Reported ED-pool rate ~${facts.edAdmitRatePct.value}% (hook-biased, estimated).`
+    : '';
+  if (plansEdHere && facts?.edStrategicValue) {
+    if (edGrade === 'high_leverage') {
+      steps += 1;
+      flags.push('ed_committed');
+      dataConfParts.push(facts.edStrategicValue.meta.confidence);
+      trace.push({
+        ruleId: 'ed_commitment',
+        label: 'Committed ED at a high-leverage binding round',
+        stepDelta: 1,
+        rationale: `Binding commitment is the strongest controllable lever at this school.${edRateNote} Bounded to one tier step; selectivity ceilings still apply.`,
+        basis: 'expert_estimate',
+        confidence: facts.edStrategicValue.meta.confidence,
+      });
+    } else {
+      flags.push('ed_committed');
+      trace.push({
+        ruleId: 'ed_commitment_limited',
+        label: `Committed early round graded "${(edGrade ?? 'unknown').replace(/_/g, ' ')}"`,
+        stepDelta: 0,
+        rationale: `${facts.edStrategicValue.meta.note ?? 'This early round carries little statistical leverage.'}${edRateNote}`,
+        basis: 'expert_estimate',
+        confidence: facts.edStrategicValue.meta.confidence,
+      });
+    }
+  } else if (edGrade === 'high_leverage') {
     flags.push('ed_leverage');
     trace.push({
       ruleId: 'ed_opportunity',
       label: 'High-leverage binding early round available',
       stepDelta: 0,
-      rationale: `${facts.edStrategicValue.meta.note ?? ''} Committing ED here could improve the effective tier — see the round strategy section.`,
+      rationale: `${facts?.edStrategicValue?.meta.note ?? ''}${edRateNote} Committing ED here could improve the effective tier — see the round strategy section.`,
       basis: 'expert_estimate',
-      confidence: facts.edStrategicValue.meta.confidence,
+      confidence: facts?.edStrategicValue?.meta.confidence ?? 'low',
     });
   }
 

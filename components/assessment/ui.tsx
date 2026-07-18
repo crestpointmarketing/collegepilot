@@ -8,12 +8,13 @@
 
 import { ShieldCheck, Landmark, Link2, UserRound, TriangleAlert, CircleHelp } from 'lucide-react';
 import type { StrategyV2 } from '@/types';
+import type { DimensionAssessment, DimensionKey } from '@/lib/admissions/assessment';
 
-export type V2Dimension = StrategyV2['assessment']['dimensions'][string];
+export type V2Dimension = DimensionAssessment;
 
 /* ── Dimension taxonomy ────────────────────────────────────── */
 
-export const DIMENSION_GROUPS: { title: string; color: string; keys: string[] }[] = [
+export const DIMENSION_GROUPS: { title: string; color: string; keys: DimensionKey[] }[] = [
   {
     title: 'Academic Foundation',
     color: '#0d9488',

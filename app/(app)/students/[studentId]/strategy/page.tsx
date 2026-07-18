@@ -24,6 +24,8 @@ import { useApp } from '@/context/AppContext';
 import { LOADING_STEPS } from '@/lib/data';
 import { strategySchema } from '@/lib/schemas';
 import { getSchoolFacts } from '@/lib/admissions/schoolFacts';
+import { evaluateSchool, extractStudentNumbers } from '@/lib/admissions/engine';
+import { SCHOOLS } from '@/lib/schools';
 import { BUCKET_BADGE, CHART_BUCKET_COLOR, CONF_CHIP, SHUTOUT_STYLE } from '@/components/assessment/ui';
 import type { Strategy, StrategyLever, StrategyV2, Student as StudentT } from '@/types';
 
@@ -543,7 +545,10 @@ const ED_GRADE_STYLE: Record<string, string> = {
   not_recommended: 'bg-red-50 text-red-600 border-red-200',
 };
 
-function EarlyDecisionMatrix({ v2, student, edEaText }: { v2: StrategyV2; student: StudentT; edEaText: string }) {
+function EarlyDecisionMatrix({ v2, student, edEaText, onPlanEd, planningEd }: {
+  v2: StrategyV2; student: StudentT; edEaText: string;
+  onPlanEd: (schoolId: string | undefined) => void; planningEd: boolean;
+}) {
   const evals = v2.evaluations ?? [];
   const withFacts = evals.map(ev => ({ ev, facts: getSchoolFacts(ev.schoolId) }));
   const bindingCandidates = withFacts
@@ -554,27 +559,43 @@ function EarlyDecisionMatrix({ v2, student, edEaText }: { v2: StrategyV2; studen
     })
     .slice(0, 3);
   const reaSchools = withFacts.filter(({ facts }) => facts?.earlyRounds?.value === 'REA').map(({ ev }) => ev.short);
-  // The ED pick is excluded from the EA count so ED + EA + RD sums to the list size.
-  const edPickId = bindingCandidates[0]?.ev.schoolId;
+  // The (potential) ED pick is excluded from the EA count so ED + EA + RD sums to the list size.
+  const edPickId = student.edChoiceId ?? bindingCandidates[0]?.ev.schoolId;
   const eaCount = withFacts.filter(({ ev, facts }) =>
     ev.schoolId !== edPickId && facts?.earlyRounds && ['EA', 'EA_ED', 'REA'].includes(facts.earlyRounds.value)).length;
   const financialFlexible = student.needBasedAid === 'No';
 
   if (!bindingCandidates.length) return null;
 
+  // Live what-if: rerun the deterministic engine with a hypothetical ED
+  // commitment at each candidate. Same rules the next regeneration will use.
+  const whatIf = (schoolId: string) => {
+    const school = SCHOOLS.find(s => s.id === schoolId);
+    if (!school) return null;
+    const hypothetical = { ...student, edChoiceId: schoolId };
+    return evaluateSchool(hypothetical, extractStudentNumbers(hypothetical), v2.assessment, school);
+  };
+
   const columns = [
-    ...bindingCandidates.map(({ ev, facts }) => ({
-      title: `${ev.short} ED`,
-      grade: facts?.edStrategicValue?.value ?? 'limited',
-      tier: ev.tierLabel,
-      binding: true,
-      conflict: reaSchools.length ? `Blocks REA at ${reaSchools.join(', ')}` : 'None known',
-      financial: financialFlexible ? 'OK — no aid comparison needed' : 'Low — binds before comparing aid offers',
-    })),
+    ...bindingCandidates.map(({ ev, facts }) => {
+      const sim = whatIf(ev.schoolId);
+      return {
+        schoolId: ev.schoolId as string | undefined,
+        title: `${ev.short} ED`,
+        grade: facts?.edStrategicValue?.value ?? 'limited',
+        tier: ev.tierLabel,
+        ifEd: sim ? `${sim.tierLabel} · ${sim.band.min}–${sim.band.max}%` : '—',
+        binding: true,
+        conflict: reaSchools.length ? `Blocks REA at ${reaSchools.join(', ')}` : 'None known',
+        financial: financialFlexible ? 'OK — no aid comparison needed' : 'Low — binds before comparing aid offers',
+      };
+    }),
     {
+      schoolId: undefined as string | undefined,
       title: 'No binding ED',
       grade: 'not_offered',
       tier: '—',
+      ifEd: 'Unchanged — RD/EA tiers as computed',
       binding: false,
       conflict: 'Keeps all EA/REA options open',
       financial: 'Full — compare every aid offer',
@@ -588,9 +609,27 @@ function EarlyDecisionMatrix({ v2, student, edEaText }: { v2: StrategyV2; studen
           <thead>
             <tr>
               <th className="text-[10.5px] font-semibold uppercase tracking-widest text-[var(--muted)] px-3 py-2" />
-              {columns.map(c => (
-                <th key={c.title} className="text-[12.5px] font-bold text-[var(--ink)] px-3 py-2 border-b border-[var(--line)]">{c.title}</th>
-              ))}
+              {columns.map(c => {
+                const isPlanned = c.schoolId !== undefined
+                  ? student.edChoiceId === c.schoolId
+                  : student.edChoiceId === undefined;
+                return (
+                  <th key={c.title} className={`px-3 py-2 border-b border-[var(--line)] ${isPlanned ? 'bg-[var(--accent-50)] rounded-t-lg' : ''}`}>
+                    <div className="text-[12.5px] font-bold text-[var(--ink)]">{c.title}</div>
+                    <button
+                      onClick={() => onPlanEd(c.schoolId)}
+                      disabled={planningEd || isPlanned}
+                      className={`mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-pill border transition-colors disabled:cursor-default ${
+                        isPlanned
+                          ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
+                          : 'bg-white text-[var(--ink-soft)] border-[var(--line-strong)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
+                      }`}
+                    >
+                      {isPlanned ? '✓ Planned' : c.schoolId ? 'Plan ED here' : 'Keep unbound'}
+                    </button>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -601,6 +640,9 @@ function EarlyDecisionMatrix({ v2, student, edEaText }: { v2: StrategyV2; studen
                 </span>
               )],
               ['Current tier', (c: typeof columns[number]) => <span className="text-[12px] font-semibold text-[var(--ink)]">{c.tier}</span>],
+              ['Tier if committed ED', (c: typeof columns[number]) => (
+                <span className="text-[12px] font-semibold" style={{ color: 'var(--accent)' }}>{c.ifEd}</span>
+              )],
               ['Binding', (c: typeof columns[number]) => (
                 <span className={`text-[11.5px] font-semibold ${c.binding ? 'text-red-500' : 'text-emerald-600'}`}>{c.binding ? 'Binding' : 'Non-binding'}</span>
               )],
@@ -622,6 +664,7 @@ function EarlyDecisionMatrix({ v2, student, edEaText }: { v2: StrategyV2; studen
         </div>
         <p className="mt-2 text-[10.5px] text-[var(--muted)]">
           Observed ED admit-rate gaps include selection effects (athletes, legacy, development cases) — leverage grades are judgment, never probability multipliers.
+          “Tier if committed ED” is a live preview with current rules; the stored report picks it up on the next regenerate.
         </p>
       </div>
 
@@ -763,7 +806,7 @@ function repairJson(input: string): string {
 export default function StrategyPage() {
   const params = useParams();
   const router = useRouter();
-  const { students, strategies, saveStrategy, markDocumentReady } = useApp();
+  const { students, strategies, saveStrategy, saveStudentDraft, markDocumentReady } = useApp();
   const studentId = params.studentId as string;
   const student = students.find(s => s.id === studentId);
   const strategy = strategies[studentId] ?? null;
@@ -772,6 +815,17 @@ export default function StrategyPage() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [genError, setGenError] = useState<string | null>(null);
   const [leverStates, setLeverStates] = useState<Record<number, LeverState>>({});
+  const [planningEd, setPlanningEd] = useState(false);
+
+  const handlePlanEd = async (schoolId: string | undefined) => {
+    if (!student || planningEd) return;
+    setPlanningEd(true);
+    try {
+      await saveStudentDraft({ ...student, edChoiceId: schoolId });
+    } finally {
+      setPlanningEd(false);
+    }
+  };
 
   const parsedLevers = useMemo(
     () => (strategy?.meta?.improvement_levers ?? []).map(parseLever),
@@ -1176,7 +1230,7 @@ export default function StrategyPage() {
         <StratCard num={strategy.analysis ? '05' : '04'} title="Application Strategy" icon={<Lightbulb size={16} />}>
           {v2 ? (
             <div className="flex flex-col gap-5">
-              <EarlyDecisionMatrix v2={v2} student={student} edEaText={strategy.strategy.ed_ea} />
+              <EarlyDecisionMatrix v2={v2} student={student} edEaText={strategy.strategy.ed_ea} onPlanEd={handlePlanEd} planningEd={planningEd} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <NarrativeCard text={strategy.strategy.narrative} />
               </div>

@@ -45,6 +45,16 @@ function fact<T>(value: T, overrides: Partial<EvidenceMeta> = {}): Fact<T> {
   };
 }
 
+/** ED-round pool rate: press/community-reported, always estimated, always biased by hooks. */
+function edRate(value: number): Fact<number> {
+  return fact(value, {
+    sourceType: 'third_party',
+    isEstimated: true,
+    confidence: 'low',
+    note: 'Press/community-reported ED-pool rate; the pool concentrates athletes, legacy and development cases, so unhooked odds run below this. Verify against current-cycle reporting.',
+  });
+}
+
 /** Judgment-typed fact: ED leverage grades are counselor judgment, not published data. */
 function edJudgment(value: EdStrategicValue, note: string): Fact<EdStrategicValue> {
   return fact(value, {
@@ -59,6 +69,13 @@ export interface SchoolAdmissionFacts {
   testPolicy?: Fact<TestPolicy>;
   earlyRounds?: Fact<EarlyRoundType>;
   edStrategicValue?: Fact<EdStrategicValue>;
+  /**
+   * Published/press-reported ED-round admit rate, percent. POOL rate only:
+   * ED pools concentrate athletes, legacy and development cases, so an
+   * unhooked applicant's odds run below this number — quote it as context,
+   * never as the applicant's probability.
+   */
+  edAdmitRatePct?: Fact<number>;
   /** CS/engineering major group — the only major group modeled in Phase 1. */
   csMajor?: Fact<MajorAdmissionFact>;
   /** Need-blind admission for international applicants. */
@@ -117,6 +134,7 @@ export const SCHOOL_FACTS: Record<string, SchoolAdmissionFacts> = {
     testPolicy: fact<TestPolicy>('optional', { confidence: HI, note: 'Announced permanently test-optional (2023).' }),
     earlyRounds: fact<EarlyRoundType>('ED', { confidence: HI }),
     edStrategicValue: edJudgment('high_leverage', 'ED fills a large share of the class; binding commitment is the main real leverage an unhooked applicant controls.'),
+    edAdmitRatePct: edRate(11),
     intlNeedBlind: fact(false),
     intlAidAvailable: fact(true),
   },
@@ -125,6 +143,7 @@ export const SCHOOL_FACTS: Record<string, SchoolAdmissionFacts> = {
     testPolicy: fact<TestPolicy>('required', { note: 'Announced reinstating test requirement; confirm effective entry year.' }),
     earlyRounds: fact<EarlyRoundType>('ED', { confidence: HI }),
     edStrategicValue: edJudgment('high_leverage', 'ED historically fills ~50% of the class.'),
+    edAdmitRatePct: edRate(15),
     intlNeedBlind: fact(false),
     intlAidAvailable: fact(true),
   },
@@ -133,6 +152,7 @@ export const SCHOOL_FACTS: Record<string, SchoolAdmissionFacts> = {
     testPolicy: fact<TestPolicy>('required', { note: 'Announced test requirement returning for fall-2026 entry; confirm current cycle.' }),
     earlyRounds: fact<EarlyRoundType>('ED', { confidence: HI }),
     edStrategicValue: edJudgment('high_leverage', 'ED admit rate meaningfully above RD even net of hooks; admits by college.'),
+    edAdmitRatePct: edRate(17),
     csMajor: fact<MajorAdmissionFact>(
       { admitRatePct: 8, competitiveness: 'high', directAdmit: true, internalTransfer: 'hard' },
       { appliesTo: 'college', isEstimated: true, note: 'Admits by college (CoE/CAS); CS-specific rate is a community estimate.' },
@@ -145,6 +165,7 @@ export const SCHOOL_FACTS: Record<string, SchoolAdmissionFacts> = {
     testPolicy: fact<TestPolicy>('required', { confidence: HI, note: 'Reinstated SAT/ACT requirement starting with fall-2025 entry.' }),
     earlyRounds: fact<EarlyRoundType>('ED', { confidence: HI }),
     edStrategicValue: edJudgment('high_leverage', 'ED fills a large share of the class.'),
+    edAdmitRatePct: edRate(14),
     intlNeedBlind: fact(true, { note: 'Announced need-blind for international applicants beginning with the class of 2029.' }),
     intlAidAvailable: fact(true, { confidence: HI }),
   },
@@ -153,6 +174,7 @@ export const SCHOOL_FACTS: Record<string, SchoolAdmissionFacts> = {
     testPolicy: fact<TestPolicy>('required', { confidence: HI, note: 'First to reinstate (Feb 2024), effective fall-2025 entry.' }),
     earlyRounds: fact<EarlyRoundType>('ED', { confidence: HI }),
     edStrategicValue: edJudgment('high_leverage', 'ED fills a large share of the class.'),
+    edAdmitRatePct: edRate(17),
     intlNeedBlind: fact(true, { note: 'Need-blind for internationals since the 2022-23 cycle.' }),
     intlAidAvailable: fact(true, { confidence: HI }),
   },
@@ -233,6 +255,7 @@ export const SCHOOL_FACTS: Record<string, SchoolAdmissionFacts> = {
     testPolicy: fact<TestPolicy>('optional', { ...EST }),
     earlyRounds: fact<EarlyRoundType>('ED', { confidence: HI }),
     edStrategicValue: edJudgment('high_leverage', 'ED fills roughly half the class.'),
+    edAdmitRatePct: edRate(20),
     intlNeedBlind: fact(false),
     intlAidAvailable: fact(true),
   },
@@ -241,6 +264,7 @@ export const SCHOOL_FACTS: Record<string, SchoolAdmissionFacts> = {
     testPolicy: fact<TestPolicy>('optional', { ...EST }),
     earlyRounds: fact<EarlyRoundType>('ED', { confidence: HI }),
     edStrategicValue: edJudgment('high_leverage', 'ED admit rate runs several times RD; even discounting hooks the binding round matters.'),
+    edAdmitRatePct: edRate(13),
     intlNeedBlind: fact(false),
     intlAidAvailable: fact(true),
   },
@@ -249,6 +273,7 @@ export const SCHOOL_FACTS: Record<string, SchoolAdmissionFacts> = {
     testPolicy: fact<TestPolicy>('required', { note: 'Announced test requirement returning for fall-2026 entry; confirm current cycle.' }),
     earlyRounds: fact<EarlyRoundType>('ED1_ED2', { confidence: HI }),
     edStrategicValue: edJudgment('high_leverage', 'ED1/ED2 fill a large share of the class.'),
+    edAdmitRatePct: edRate(15),
     intlNeedBlind: fact(false),
     intlAidAvailable: fact(true),
   },
@@ -257,6 +282,7 @@ export const SCHOOL_FACTS: Record<string, SchoolAdmissionFacts> = {
     testPolicy: fact<TestPolicy>('optional', { note: 'Extended test-optional multiple cycles; confirm current cycle.' }),
     earlyRounds: fact<EarlyRoundType>('ED1_ED2', { confidence: HI }),
     edStrategicValue: edJudgment('high_leverage', 'ED1/ED2 admit rates far exceed RD.'),
+    edAdmitRatePct: edRate(15),
     intlNeedBlind: fact(false),
     intlAidAvailable: fact(true),
   },
@@ -265,6 +291,7 @@ export const SCHOOL_FACTS: Record<string, SchoolAdmissionFacts> = {
     testPolicy: fact<TestPolicy>('optional', { ...EST }),
     earlyRounds: fact<EarlyRoundType>('ED1_ED2', { confidence: HI }),
     edStrategicValue: edJudgment('moderate', 'ED meaningful but Rice RD remains comparatively holistic.'),
+    edAdmitRatePct: edRate(13),
     intlNeedBlind: fact(false),
     intlAidAvailable: fact(true),
   },
@@ -281,6 +308,7 @@ export const SCHOOL_FACTS: Record<string, SchoolAdmissionFacts> = {
     testPolicy: fact<TestPolicy>('optional', { ...EST }),
     earlyRounds: fact<EarlyRoundType>('ED1_ED2', { confidence: HI }),
     edStrategicValue: edJudgment('high_leverage', 'ED1/ED2 fill a large share of the class.'),
+    edAdmitRatePct: edRate(27),
     intlNeedBlind: fact(false),
     intlAidAvailable: fact(true),
   },
@@ -289,6 +317,7 @@ export const SCHOOL_FACTS: Record<string, SchoolAdmissionFacts> = {
     testPolicy: fact<TestPolicy>('optional', { ...EST }),
     earlyRounds: fact<EarlyRoundType>('ED1_ED2', { confidence: HI }),
     edStrategicValue: edJudgment('high_leverage', 'ED1/ED2 admit rates far exceed RD.'),
+    edAdmitRatePct: edRate(30),
     intlNeedBlind: fact(false),
     intlAidAvailable: fact(true),
   },

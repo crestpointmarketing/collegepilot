@@ -104,10 +104,10 @@ export default function SchoolDetailPage() {
   const { evaluation, recomputed } = useMemo((): { evaluation: SchoolEvaluation | null; recomputed: boolean } => {
     if (!student || !school) return { evaluation: null, recomputed: false };
     const stored = v2?.evaluations?.find(e => e.schoolId === schoolId);
-    if (stored) return { evaluation: stored as unknown as SchoolEvaluation, recomputed: false };
+    if (stored) return { evaluation: stored, recomputed: false };
     if (!v2?.assessment) return { evaluation: null, recomputed: false };
     return {
-      evaluation: evaluateSchool(student, extractStudentNumbers(student), v2.assessment as unknown as ProfileAssessment, school),
+      evaluation: evaluateSchool(student, extractStudentNumbers(student), v2.assessment, school),
       recomputed: true,
     };
   }, [student, school, v2, schoolId]);
