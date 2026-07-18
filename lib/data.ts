@@ -200,8 +200,8 @@ export const SAMPLE_STUDENTS: Student[] = [
         grades: [12],
         timing: 'School Break',
         hours: '',
-        weeks: '',
-        period: 'Summer 2026',
+        weeks: 6,
+        period: 'Summer 2026 (6-week program)',
       },
     ],
     awards: [
@@ -260,7 +260,7 @@ export const SAMPLE_STUDENTS: Student[] = [
         level: 'Regional',
       },
     ],
-    sampleProfileRevision: '2026-07-17-online-presence-links',
+    sampleProfileRevision: '2026-07-18-vla-six-week-program',
     seniorCourses: 'Multivariable Calculus (planned); continued CS/AI systems coursework',
     additionalInformation: 'Certifications: Full-Stack Web Development Certificate (UT Austin); CS50 Introduction to Computer Science (Harvard); Introduction to Java, Grade A (Johns Hopkins CTY); Prompt Engineering Bootcamp (Udemy). Portfolio site with per-project write-ups and demo videos at ethanli.ai.',
     projects: [
@@ -300,7 +300,7 @@ export const SAMPLE_STUDENTS: Student[] = [
         outcome: 'Measured up to 100% in-distribution success; single-environment policies dropped to about 20% out of distribution, while merged tabletop + lightbox training recovered 80% success in both environments.',
         affiliation: 'UT Dallas STEM Bridge — Intelligent Robotics and Vision Lab (IRVL)',
         impact: 'Demonstrated how diverse training environments improve VLA generalization across lighting and background changes.',
-        period: 'Summer 2026',
+        period: 'Summer 2026 — 6-week structured summer research program',
         links: [
           { type: 'website', url: 'https://www.ethanli.ai/projects/vla-robot-manipulation', label: 'Research page with demo & results' },
         ],

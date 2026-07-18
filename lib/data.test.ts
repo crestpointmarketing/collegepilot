@@ -41,7 +41,8 @@ describe('Ethan Li final Grade-11 transcript', () => {
     expect(ethan?.activities.find(activity => activity.org === 'OneSource Cloud')?.period).toBe('Summer 2025–Present');
     expect(ethan?.projects?.map(project => project.id)).toEqual(['p1', 'p2', 'p3', 'p4', 'p5']);
     expect(ethan?.projects?.find(project => project.id === 'p3')?.outcome).toContain('80% success');
-    expect(ethan?.projects?.find(project => project.id === 'p3')?.period).toBe('Summer 2026');
+    expect(ethan?.projects?.find(project => project.id === 'p3')?.period).toBe('Summer 2026 — 6-week structured summer research program');
+    expect(ethan?.activities.find(activity => activity.org === 'UT Dallas STEM Bridge / IRVL')?.weeks).toBe(6);
   });
 
   it('upgrades an existing Ethan sample without creating or replacing unrelated students', () => {
@@ -49,7 +50,7 @@ describe('Ethan Li final Grade-11 transcript', () => {
     const upgraded = upgradeSampleStudentProfile(oldEthan);
     const unrelated = SAMPLE_STUDENTS.find(student => student.id === 's1')!;
 
-    expect(upgraded.sampleProfileRevision).toBe('2026-07-17-online-presence-links');
+    expect(upgraded.sampleProfileRevision).toBe('2026-07-18-vla-six-week-program');
     expect(upgraded.activities).toHaveLength(10);
     expect(upgraded.projects).toHaveLength(5);
     expect(upgraded.status).toBe('Draft');
