@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import type { School, Student, StrategyV2 } from '@/types';
 import { computeApplicationStrategy, computeSchoolMatch, type FitLevel } from '@/lib/admissions/schoolMatch';
+import { SchoolStructurePanel } from './SchoolStructurePanel';
 
 const FIT_STYLE: Record<FitLevel, { bar: string; chip: string }> = {
   Excellent: { bar: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -83,22 +84,30 @@ export function IntelligenceCenter({ student, school, v2, studentId }: {
     }
   };
 
+  // Structure + reputation are school-intrinsic and always shown. Match /
+  // Strategy / AO need the assessment; without it, show them as a prompt.
   if (!assessment || !match || !strategy) {
     return (
-      <div className="bg-white border border-[var(--line)] rounded-xl p-10 text-center">
-        <div className="w-11 h-11 rounded-full bg-[var(--accent-50)] flex items-center justify-center mx-auto mb-3">
-          <Sparkles size={18} style={{ color: 'var(--accent)' }} />
+      <div className="flex flex-col gap-4">
+        <SchoolStructurePanel school={school} field={student.major} />
+        <div className="bg-white border border-[var(--line)] rounded-xl p-10 text-center">
+          <div className="w-11 h-11 rounded-full bg-[var(--accent-50)] flex items-center justify-center mx-auto mb-3">
+            <Sparkles size={18} style={{ color: 'var(--accent)' }} />
+          </div>
+          <h3 className="text-[15px] font-semibold text-[var(--ink)] mb-1">Fit, Strategy & AO Perspective need a strategy first</h3>
+          <p className="text-[13px] text-[var(--muted)] max-w-sm mx-auto">
+            Match analysis, application strategy, and the admissions-officer read are computed from {student.name}&apos;s profile assessment. Generate a strategy to unlock them.
+          </p>
         </div>
-        <h3 className="text-[15px] font-semibold text-[var(--ink)] mb-1">Match analysis needs a strategy first</h3>
-        <p className="text-[13px] text-[var(--muted)] max-w-sm mx-auto">
-          Match, Strategy, and AO Perspective are computed from {student.name}&apos;s profile assessment. Generate a strategy to unlock them.
-        </p>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-4">
+      {/* School structure + program reputation (school-intrinsic) */}
+      <SchoolStructurePanel school={school} field={student.major} />
+
       {/* Overall match banner */}
       <div className="rounded-xl border border-[var(--accent-100)] bg-[var(--accent-50)] p-5">
         <div className="flex items-center gap-4 flex-wrap">
