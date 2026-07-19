@@ -703,7 +703,7 @@ export default function ResearchPage() {
           ) : !matchSchool ? (
             <div className="bg-white border border-[var(--line)] rounded-xl p-10 text-center text-[13px] text-[var(--muted)]">Pick a school to see the fit and application analysis.</div>
           ) : (
-            <IntelligenceCenter student={activeStudent} school={matchSchool} v2={v2} studentId={studentId} />
+            <IntelligenceCenter key={matchSchool.id} student={activeStudent} school={matchSchool} v2={v2} studentId={studentId} />
           )}
         </div>
       )}

@@ -81,6 +81,26 @@ describe('computeSchoolMatch', () => {
     expect(m.overall).toBe('Limited');
   });
 
+  it('degrades gracefully instead of crashing when a dimension key is missing', () => {
+    const a = assessment();
+    // Simulate an older/partial persisted assessment missing several keys.
+    const partial = { ...a, dimensions: { ...a.dimensions } } as ProfileAssessment;
+    delete (partial.dimensions as Record<string, unknown>).academic_readiness;
+    delete (partial.dimensions as Record<string, unknown>).major_preparation;
+    delete (partial.dimensions as Record<string, unknown>).leadership_impact;
+    expect(() => computeSchoolMatch(student(), byId('cornell'), partial)).not.toThrow();
+    const m = computeSchoolMatch(student(), byId('cornell'), partial);
+    expect(m.axes).toHaveLength(6);
+  });
+
+  it('does not tag an unrelated school major as intended via loose substring matching', () => {
+    // Economics student: "Engineering" / "Computer Science" must NOT be flagged
+    // as their intended major just because of substring overlap.
+    const m = computeSchoolMatch(student({ major: 'Economics' }), byId('cornell'), assessment());
+    const eng = m.majorRecommendations.find(r => /engineering|computer science/i.test(r.major));
+    if (eng) expect(eng.isIntended).toBe(false);
+  });
+
   it('never lets missing preference data (Unknown) drag overall fit below the known axes', () => {
     // Strong verified profile, no stated setting/size prefs → culture Unknown.
     const m = computeSchoolMatch(
@@ -130,5 +150,30 @@ describe('computeApplicationStrategy', () => {
     const a = assessment();
     const strat = computeApplicationStrategy(student(), s, a, computeSchoolMatch(student(), s, a));
     expect(strat.recommendedRound).toBe('EA');
+  });
+
+  it('does not steer into binding ED at a school where ED leverage is limited/not-recommended', () => {
+    // Georgetown offers REA (not binding ED) — but test the general rule via a
+    // school with EA_ED + limited leverage: prefer the non-binding EA.
+    const s = byId('cwru'); // EA_ED, moderate
+    const a = assessment();
+    const strat = computeApplicationStrategy(student(), s, a, computeSchoolMatch(student(), s, a));
+    // Whatever it recommends, it must never contradict itself by printing
+    // "not recommended leverage" while recommending ED.
+    expect(strat.roundRationale.toLowerCase()).not.toMatch(/not recommended leverage/);
+    if (strat.recommendedRound === 'ED') {
+      // If it does pick ED, it must be because leverage is real, not the fallthrough.
+      expect(strat.roundRationale).not.toMatch(/limited leverage/i);
+    }
+  });
+
+  it('never tells a student to avoid their own intended major', () => {
+    // Intended CS at a gated school, but weak prep → Limited + gated.
+    const st = student({ major: 'Computer Science' });
+    const s = byId('uiuc');
+    const a = assessment({ major_preparation: { tier: 'developing', verifiability: 'self_reported_only' } });
+    const match = computeSchoolMatch(st, s, a);
+    const strat = computeApplicationStrategy(st, s, a, match);
+    if (strat.avoid) expect(strat.avoid.toLowerCase()).not.toContain('computer science');
   });
 });

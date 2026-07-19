@@ -1,5 +1,10 @@
 -- Run this in Supabase Dashboard → SQL Editor
 -- Upserts ALL sample student profiles under vivianxie30@gmail.com
+--
+-- BOOTSTRAP ONLY. This seed carries an OLDER sampleProfileRevision on purpose:
+-- lib/data.ts is the source of truth, and upgradeSampleStudentProfile() rewrites
+-- the stale fields (internship timing, VLA awards, project hierarchy, …) on read.
+-- Do NOT hand-sync individual fields here — bump the revision in data.ts instead.
 
 DO $outer$
 DECLARE

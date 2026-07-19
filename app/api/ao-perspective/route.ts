@@ -37,8 +37,9 @@ export async function POST(req: NextRequest) {
     const school = SCHOOLS.find(s => s.id === schoolId);
     if (!school) return NextResponse.json({ error: 'Unknown school' }, { status: 404 });
 
-    const { data: studentRow } = await supabase
+    const { data: studentRow, error: studentError } = await supabase
       .from('students').select('data').eq('id', studentId).eq('user_id', user.id).maybeSingle();
+    if (studentError) return NextResponse.json({ error: 'Could not load the student profile.' }, { status: 500 });
     if (!studentRow) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     const student = studentRow.data as Student;
 
@@ -72,7 +73,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ perspective: text, school: school.name, generatedAt: new Date().toISOString() });
   } catch (err) {
+    // Log the detail server-side; return a generic message so provider/internal
+    // detail never surfaces in the browser.
     console.error('AO perspective error:', err);
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Could not generate the perspective. Please try again.' }, { status: 500 });
   }
 }

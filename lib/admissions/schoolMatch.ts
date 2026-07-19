@@ -16,11 +16,18 @@ import type { School, Student } from '@/types';
 import { getSchoolFacts } from './schoolFacts';
 import { evaluateSchool, extractStudentNumbers, isInternationalApplicant } from './engine';
 import { TIER_META, tierIndex, type Tier } from './definitions';
+import { DIMENSION_KEYS } from './assessment';
 import type { DimensionAssessment, DimensionKey, ProfileAssessment } from './assessment';
 
 /* ── Fit axes (qualitative — tier word + evidence) ─────────── */
 
 export type FitLevel = 'Excellent' | 'Strong' | 'Moderate' | 'Limited' | 'Unknown';
+
+/** Single source of truth for fit ordering (weakest → strongest). */
+export const FIT_ORDER: FitLevel[] = ['Unknown', 'Limited', 'Moderate', 'Strong', 'Excellent'];
+export function fitRank(level: FitLevel): number {
+  return FIT_ORDER.indexOf(level);
+}
 
 export interface FitAxis {
   key: 'academic' | 'program' | 'research' | 'culture' | 'narrative' | 'admission_difficulty';
@@ -38,10 +45,35 @@ function dimLevel(d: DimensionAssessment | undefined): FitLevel {
   return d ? DIM_TO_LEVEL[d.tier] ?? 'Moderate' : 'Unknown';
 }
 
+const NEUTRAL_DIM: DimensionAssessment = {
+  tier: 'solid', evidence: [], missing: [], risks: [],
+  verifiability: 'self_reported_only', confidence: 'low',
+  reader_interpretation: '', overstatement_risk: 'low',
+};
+
+/**
+ * Safe dimension accessor. A persisted/older assessment may be missing a key;
+ * degrade to a neutral placeholder rather than crashing the whole match.
+ */
+function safeDim(dims: ProfileAssessment['dimensions'], key: DimensionKey): DimensionAssessment {
+  return dims[key] ?? NEUTRAL_DIM;
+}
+
+/**
+ * Fill any missing dimensions so downstream consumers (including the engine,
+ * which reads dims directly) never hit an undefined key.
+ */
+function completeAssessment(assessment: ProfileAssessment): ProfileAssessment {
+  const dims = { ...assessment.dimensions };
+  for (const key of DIMENSION_KEYS) {
+    if (!dims[key]) (dims as Record<string, DimensionAssessment>)[key] = NEUTRAL_DIM;
+  }
+  return { ...assessment, dimensions: dims };
+}
+
 /** Combine two dimension levels, taking the weaker as the honest floor. */
 function weakerLevel(a: FitLevel, b: FitLevel): FitLevel {
-  const order: FitLevel[] = ['Unknown', 'Limited', 'Moderate', 'Strong', 'Excellent'];
-  return order.indexOf(a) <= order.indexOf(b) ? a : b;
+  return fitRank(a) <= fitRank(b) ? a : b;
 }
 
 /* ── Strength alignment & gaps ─────────────────────────────── */
@@ -58,6 +90,8 @@ export interface MajorRecommendation {
   major: string;
   fit: FitLevel;
   reason: string;
+  /** True when this is the student's own intended major. */
+  isIntended: boolean;
   /** True when this major is gated (capped/direct-admit) at this school. */
   gated: boolean;
   caution?: string;
@@ -86,12 +120,19 @@ const CS_RE = /comp(uter)?\s*sci|software|\bcs\b|\bece\b|electrical|artificial i
 function recommendMajors(student: Student, school: School, dims: ProfileAssessment['dimensions']): MajorRecommendation[] {
   const nums = extractStudentNumbers(student);
   const csFacts = getSchoolFacts(school.id)?.csMajor;
-  const majorPrep = dims.major_preparation;
-  const intended = student.major.toLowerCase();
+  const majorPrep = safeDim(dims, 'major_preparation');
+  // Intended major as a normalized token set, ignoring joiners.
+  const intendedTokens = new Set(
+    student.major.toLowerCase().split(/[/,&]|\band\b/).map(s => s.trim()).filter(Boolean),
+  );
+  // A school major is the "intended" one only when its full normalized name
+  // matches one of the intended segments — not a loose substring (which made
+  // "Engineering" match "Computer Science and Engineering").
+  const isIntendedMajor = (ml: string) => intendedTokens.has(ml);
 
   return school.majors.slice(0, 6).map(major => {
-    const ml = major.toLowerCase();
-    const isIntended = ml.includes(intended.split('/')[0].trim()) || intended.includes(ml);
+    const ml = major.toLowerCase().trim();
+    const isIntended = isIntendedMajor(ml);
     const isCsFamily = CS_RE.test(major);
     const csGated = isCsFamily && csFacts
       && (csFacts.value.competitiveness === 'extreme' || csFacts.value.competitiveness === 'high');
@@ -105,7 +146,7 @@ function recommendMajors(student: Student, school: School, dims: ProfileAssessme
         : `Aligns with intended direction, though major preparation grades only ${majorPrep.tier}.`;
     } else if (isCsFamily) {
       fit = 'Moderate';
-      reason = 'Adjacent to the student\'s CS/AI focus — a viable pivot with some transferable preparation.';
+      reason = 'Adjacent to the student\'s CS/AI focus — a viable pivot, though preparation specific to this major is unverified.';
     } else {
       fit = 'Limited';
       reason = 'Outside the student\'s demonstrated academic focus; would need a distinct rationale.';
@@ -115,47 +156,51 @@ function recommendMajors(student: Student, school: School, dims: ProfileAssessme
       major,
       fit,
       reason,
+      isIntended,
       gated: Boolean(csGated) || (csFacts?.value.directAdmit && isCsFamily) || false,
       caution: csGated
         ? `${major} is a gated/direct-admit program here — admission is materially harder than the campus rate.`
         : undefined,
     };
-  }).sort((a, b) => {
-    const order: FitLevel[] = ['Unknown', 'Limited', 'Moderate', 'Strong', 'Excellent'];
-    return order.indexOf(b.fit) - order.indexOf(a.fit);
-  });
+    // Sort by fit, then break ties toward the student's actual intended major.
+  }).sort((a, b) => fitRank(b.fit) - fitRank(a.fit) || Number(b.isIntended) - Number(a.isIntended));
 }
 
-export function computeSchoolMatch(student: Student, school: School, assessment: ProfileAssessment): SchoolMatch {
+export function computeSchoolMatch(student: Student, school: School, rawAssessment: ProfileAssessment): SchoolMatch {
+  const assessment = completeAssessment(rawAssessment);
   const dims = assessment.dimensions;
   const nums = extractStudentNumbers(student);
-  const facts = getSchoolFacts(school.id);
   const evaluation = evaluateSchool(student, nums, assessment, school);
+
+  // Pull the dimensions we read directly, safely.
+  const academic = safeDim(dims, 'academic_readiness');
+  const narrative = safeDim(dims, 'narrative_coherence');
+  const leadership = safeDim(dims, 'leadership_impact');
+  const majorPrep = safeDim(dims, 'major_preparation');
 
   // Program fit: does the student's intent map to a real strength of this school?
   const majorLower = student.major.toLowerCase().split('/')[0].trim();
   const schoolOffersMajor = school.majors.some(m => m.toLowerCase().includes(majorLower) || majorLower.includes(m.toLowerCase()));
   const programLevel: FitLevel = schoolOffersMajor
-    ? weakerLevel(dimLevel(dims.major_preparation), 'Strong')
+    ? weakerLevel(dimLevel(majorPrep), 'Strong')
     : 'Limited';
 
   // Research fit: student's research/intellectual signal vs a research-heavy school.
   const researchHeavy = school.vibe.includes('Research') || school.topRanked;
   const researchLevel = weakerLevel(
-    dimLevel(dims.intellectual_vitality),
-    dimLevel(dims.extracurricular_distinction),
+    dimLevel(safeDim(dims, 'intellectual_vitality')),
+    dimLevel(safeDim(dims, 'extracurricular_distinction')),
   );
 
   const axes: FitAxis[] = [
     {
-      key: 'academic', label: 'Academic Fit', level: dimLevel(dims.academic_readiness),
-      rationale: dims.academic_readiness.evidence[0]
-        ?? `Academic readiness graded ${dims.academic_readiness.tier}.`,
+      key: 'academic', label: 'Academic Fit', level: dimLevel(academic),
+      rationale: academic.evidence[0] ?? `Academic readiness graded ${academic.tier}.`,
     },
     {
       key: 'program', label: 'Program Fit', level: programLevel,
       rationale: schoolOffersMajor
-        ? `${school.short} offers the intended major; preparation graded ${dims.major_preparation.tier}.`
+        ? `${school.short} offers the intended major; preparation graded ${majorPrep.tier}.`
         : `${school.short} is not a natural home for "${student.major}" — verify the program exists and fits.`,
     },
     {
@@ -169,9 +214,8 @@ export function computeSchoolMatch(student: Student, school: School, assessment:
       rationale: culturalRationale(student, school),
     },
     {
-      key: 'narrative', label: 'Narrative Fit', level: dimLevel(dims.narrative_coherence),
-      rationale: dims.narrative_coherence.evidence[0]
-        ?? `Narrative coherence graded ${dims.narrative_coherence.tier}; ${school.angle}`,
+      key: 'narrative', label: 'Narrative Fit', level: dimLevel(narrative),
+      rationale: narrative.evidence[0] ?? `Narrative coherence graded ${narrative.tier}; ${school.angle}`,
     },
     {
       key: 'admission_difficulty', label: 'Admission Difficulty', level: difficultyLevel(evaluation.tier),
@@ -184,11 +228,11 @@ export function computeSchoolMatch(student: Student, school: School, assessment:
   // does cap confidence at "Strong" since we can't confirm Excellent blind.
   const fitAxes = axes.filter(a => a.key !== 'admission_difficulty');
   const knownAxes = fitAxes.filter(a => a.level !== 'Unknown');
-  const hasUnknown = fitAxes.some(a => a.level === 'Unknown');
+  const unknownAxes = fitAxes.filter(a => a.level === 'Unknown');
   const rawOverall = knownAxes.length
     ? knownAxes.reduce<FitLevel>((acc, a) => weakerLevel(acc, a.level), 'Excellent')
     : 'Unknown';
-  const overall: FitLevel = hasUnknown && rawOverall === 'Excellent' ? 'Strong' : rawOverall;
+  const overall: FitLevel = unknownAxes.length && rawOverall === 'Excellent' ? 'Strong' : rawOverall;
 
   // Strengths: verified exceptional/strong dimensions that this school rewards.
   const strengths: AlignmentItem[] = [];
@@ -207,8 +251,8 @@ export function computeSchoolMatch(student: Student, school: School, assessment:
 
   // Weaknesses: reuse the engine's flags + assessment gaps that matter here.
   const weaknesses: AlignmentItem[] = [];
-  if (dims.leadership_impact.tier === 'developing' || dims.leadership_impact.tier === 'concern') {
-    weaknesses.push({ label: 'Leadership footprint', level: 'Limited', detail: dims.leadership_impact.risks[0] ?? 'Little organization-building or team leadership evidence.' });
+  if (leadership.tier === 'developing' || leadership.tier === 'concern') {
+    weaknesses.push({ label: 'Leadership footprint', level: 'Limited', detail: leadership.risks[0] ?? 'Little organization-building or team leadership evidence.' });
   }
   for (const [key, d] of Object.entries(dims)) {
     if ((d.tier === 'exceptional' || d.tier === 'strong') && d.verifiability === 'self_reported_only') {
@@ -222,13 +266,30 @@ export function computeSchoolMatch(student: Student, school: School, assessment:
     weaknesses.push({ label: 'Gated major', level: 'Limited', detail: `The intended major is direct-admit/capped here — internal transfer in is very hard.` });
   }
 
+  // Honest overall rationale: never claim "every dimension is strong+" when
+  // some axis was Unknown (un-judged, not confirmed).
+  const overallRationale = (() => {
+    const unknownLabels = unknownAxes.map(a => a.label).join(', ');
+    if (overall === 'Excellent') {
+      return 'Every measured fit dimension lands excellent — a genuinely aligned target.';
+    }
+    if (overall === 'Strong') {
+      return unknownAxes.length
+        ? `Strong across every measured dimension; ${unknownLabels} could not be judged (missing input), which caps confidence below Excellent.`
+        : 'Every fit dimension lands strong or better — a genuinely aligned target.';
+    }
+    if (overall === 'Unknown') {
+      return 'Not enough profile input to judge fit for this school yet.';
+    }
+    const weakest = knownAxes.find(a => a.level === overall)?.label ?? 'a fit axis';
+    return `Overall fit is held to "${overall}" by the weakest measured dimension (${weakest})${unknownAxes.length ? `; ${unknownLabels} could not be judged` : ''}.`;
+  })();
+
   return {
     schoolId: school.id,
     schoolShort: school.short,
     overall,
-    overallRationale: overall === 'Excellent' || overall === 'Strong'
-      ? `Every fit dimension lands ${overall.toLowerCase()} or better — a genuinely aligned target.`
-      : `Overall fit is held to "${overall}" by the weakest dimension (${fitAxes.find(a => a.level === overall)?.label ?? 'a fit axis'}).`,
+    overallRationale,
     axes,
     strengths: strengths.slice(0, 6),
     weaknesses: weaknesses.slice(0, 5),
@@ -293,6 +354,7 @@ export function computeApplicationStrategy(
   let roundRationale: string;
   let roundStrength: FitLevel = 'Moderate';
 
+  const offersEA = early === 'EA_ED'; // has a non-binding EA alongside ED
   if (early && ['ED', 'ED1_ED2', 'EA_ED'].includes(early)) {
     if (edGrade === 'high_leverage' && !isIntlAidNeeded) {
       recommendedRound = 'ED'; roundStrength = 'Excellent';
@@ -300,6 +362,16 @@ export function computeApplicationStrategy(
     } else if (edGrade === 'high_leverage' && isIntlAidNeeded) {
       recommendedRound = 'RD'; roundStrength = 'Limited';
       roundRationale = 'ED would help, but binding before comparing aid offers is risky for an aid-dependent applicant — lean RD unless the family can commit financially.';
+    } else if (edGrade === 'not_recommended' || edGrade === 'limited') {
+      // Don't steer into binding ED where it carries no real edge.
+      recommendedRound = offersEA ? 'EA' : 'RD';
+      roundStrength = offersEA ? 'Strong' : 'Moderate';
+      roundRationale = offersEA
+        ? `ED here is ${(edGrade).replace(/_/g, ' ')} leverage — take the non-binding EA instead and keep aid/options open.`
+        : `ED here is ${(edGrade).replace(/_/g, ' ')} leverage — binding commitment isn't worth it; apply RD.`;
+    } else if (isIntlAidNeeded) {
+      recommendedRound = offersEA ? 'EA' : 'RD'; roundStrength = 'Moderate';
+      roundRationale = 'Aid-dependent applicant: avoid binding before comparing offers — use the non-binding round if available, else RD.';
     } else {
       recommendedRound = 'ED'; roundStrength = 'Moderate';
       roundRationale = `ED available with ${(edGrade ?? 'moderate').replace(/_/g, ' ')} leverage — worth it only if this is a clear first choice.`;
@@ -315,8 +387,11 @@ export function computeApplicationStrategy(
   }
 
   const topMajor = match.majorRecommendations[0];
-  const altMajor = match.majorRecommendations[1];
-  const avoid = match.majorRecommendations.find(m => m.fit === 'Limited' && m.gated);
+  const altMajor = match.majorRecommendations.find(m => m.major !== topMajor?.major);
+  // Only warn away from a poor-fit gated major that ISN'T the student's own
+  // intent (never tell them to avoid the thing they came to study — that's a
+  // "strengthen prep" note handled elsewhere, not an avoid).
+  const avoid = match.majorRecommendations.find(m => m.fit === 'Limited' && m.gated && !m.isIntended);
 
   // Essay angles from the verified spike + school's stated angle.
   const essayAngles: string[] = [];

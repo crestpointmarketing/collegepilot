@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import type { School, Student, StrategyV2 } from '@/types';
 import { computeApplicationStrategy, computeSchoolMatch, type FitLevel } from '@/lib/admissions/schoolMatch';
-import type { ProfileAssessment } from '@/lib/admissions/assessment';
 
 const FIT_STYLE: Record<FitLevel, { bar: string; chip: string }> = {
   Excellent: { bar: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -22,9 +21,20 @@ const FIT_STYLE: Record<FitLevel, { bar: string; chip: string }> = {
   Limited: { bar: 'bg-red-400', chip: 'bg-red-50 text-red-600 border-red-200' },
   Unknown: { bar: 'bg-slate-300', chip: 'bg-slate-50 text-slate-500 border-slate-200' },
 };
-const FIT_FILL: Record<FitLevel, number> = { Excellent: 5, Strong: 4, Moderate: 3, Limited: 2, Unknown: 1 };
+// Rated levels fill 2–5 dots; Unknown is NOT a low score — it renders as a
+// distinct dashed "not measured" row so missing data never reads as "bad fit".
+const FIT_FILL: Record<Exclude<FitLevel, 'Unknown'>, number> = { Excellent: 5, Strong: 4, Moderate: 3, Limited: 2 };
 
 function FitDots({ level }: { level: FitLevel }) {
+  if (level === 'Unknown') {
+    return (
+      <div className="flex gap-1" title="Not measured — missing input, not a low score">
+        {[1, 2, 3, 4, 5].map(i => (
+          <span key={i} className="w-2 h-2 rounded-full border border-dashed border-slate-300" />
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="flex gap-1">
       {[1, 2, 3, 4, 5].map(i => (
@@ -41,7 +51,7 @@ function FitChip({ level }: { level: FitLevel }) {
 export function IntelligenceCenter({ student, school, v2, studentId }: {
   student: Student; school: School; v2: StrategyV2 | null; studentId: string;
 }) {
-  const assessment = v2?.assessment as ProfileAssessment | undefined;
+  const assessment = v2?.assessment;
 
   const match = useMemo(
     () => (assessment ? computeSchoolMatch(student, school, assessment) : null),
