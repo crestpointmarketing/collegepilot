@@ -16,7 +16,6 @@ import {
   matchesRegionOrState, type SchoolEvaluation,
 } from '@/lib/admissions/engine';
 import { TIER_META, TIER_ORDER, tierIndex, type Tier } from '@/lib/admissions/definitions';
-import type { ProfileAssessment } from '@/lib/admissions/assessment';
 import type { Fact } from '@/lib/admissions/definitions';
 import { BUCKET_BADGE } from '@/components/assessment/ui';
 

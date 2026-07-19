@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { TASK_MATERIALS, deriveTimelineTasks, parsePlanMonth } from '@/lib/timelineTasks';
-import type { Student } from '@/types';
 
 /* ── Task derivation (stable content-hash ids, shared with the route) ── */
 
