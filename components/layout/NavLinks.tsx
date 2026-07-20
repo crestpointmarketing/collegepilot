@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, LayoutGrid, User, ClipboardCheck, Target, CalendarDays, GraduationCap, FlaskConical, FileText, Download } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid, User, ClipboardCheck, Target, CalendarDays, GraduationCap, FlaskConical, FileText, Download, ScrollText } from 'lucide-react';
 
 const GLOBAL_NAV = [
   { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -13,6 +13,7 @@ const STUDENT_NAV = [
   { id: 'profile',    label: 'Profile',    icon: User },
   { id: 'assessment', label: 'Assessment', icon: ClipboardCheck },
   { id: 'strategy',   label: 'Strategy',   icon: Target },
+  { id: 'blueprint',  label: 'Blueprint',  icon: ScrollText },
   { id: 'timeline',   label: 'Timeline',   icon: CalendarDays },
   { id: 'schools',    label: 'Schools',    icon: GraduationCap },
   { id: 'research',   label: 'Research',   icon: FlaskConical },

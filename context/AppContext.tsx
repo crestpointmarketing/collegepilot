@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import type { Student, Strategy, Tweaks, School } from '@/types';
+import type { Blueprint } from '@/lib/admissions/blueprint';
 import { SAMPLE_STUDENTS, INITIAL_STRATEGIES, TWEAK_DEFAULTS, ACCENT_PALETTES, upgradeSampleStudentProfile } from '@/lib/data';
 import { SCHOOLS } from '@/lib/schools';
 import { createClient } from '@/lib/supabase';
@@ -13,6 +14,7 @@ interface AppContextValue {
   students: Student[];
   schools: School[];
   strategies: Record<string, Strategy>;
+  blueprints: Record<string, Blueprint>;
   tweaks: Tweaks;
   saveState: 'idle' | 'saving' | 'saved' | 'error';
   loading: boolean;
@@ -24,6 +26,7 @@ interface AppContextValue {
   seedSampleStudents: () => Promise<void>;
   deleteStudent: (studentId: string) => Promise<boolean>;
   saveStrategy: (studentId: string, strategy: Strategy) => Promise<boolean>;
+  saveBlueprint: (studentId: string, blueprint: Blueprint) => Promise<boolean>;
   markDocumentReady: (studentId: string) => Promise<boolean>;
   signOut: () => Promise<void>;
 }
@@ -43,6 +46,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [students, setStudents] = useState<Student[]>([]);
   const [schools] = useState<School[]>(SCHOOLS);
   const [strategies, setStrategies] = useState<Record<string, Strategy>>({});
+  const [blueprints, setBlueprints] = useState<Record<string, Blueprint>>({});
   const [tweaks, setTweaks] = useState<Tweaks>(() => {
     if (typeof window === 'undefined') return TWEAK_DEFAULTS;
     try {
@@ -88,6 +92,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setStudents([]);
         setStrategies({});
+        setBlueprints({});
         setLoading(false);
       } else if (loadedUserIdRef.current !== session.user.id) {
         loadedUserIdRef.current = session.user.id;
@@ -164,6 +169,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       });
       setStrategies(loadedStrategies);
+
+      // Best-effort: the blueprints table is optional and may not exist yet
+      // (added later than students/strategies). A missing table or query error
+      // must never blank the workspace, so this degrades to no blueprints.
+      try {
+        const { data: bpRows, error: bpError } = await supabase
+          .from('blueprints').select('student_id, data').eq('user_id', userId);
+        if (bpError) {
+          console.warn('Blueprints not loaded (table may not exist yet):', bpError.message);
+          setBlueprints({});
+        } else {
+          const loadedBlueprints: Record<string, Blueprint> = {};
+          bpRows?.forEach(r => {
+            const bp = r.data as Blueprint | null;
+            if (bp && bp.version === 1) loadedBlueprints[r.student_id] = bp;
+          });
+          setBlueprints(loadedBlueprints);
+        }
+      } catch (bpErr) {
+        console.warn('Blueprints load skipped:', bpErr);
+        setBlueprints({});
+      }
     } catch (err) {
       console.error('Failed to load workspace data:', err);
       setLoadError(err instanceof Error ? err.message : 'Failed to load workspace data.');
@@ -323,6 +350,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return ok;
   };
 
+  // The server route already persists the blueprint; this syncs the local
+  // cache and re-upserts (idempotent) so the page reflects it without a reload.
+  const saveBlueprint = async (studentId: string, blueprint: Blueprint): Promise<boolean> => {
+    if (!user) {
+      setSaveState('error');
+      return false;
+    }
+    setSaveState('saving');
+    setBlueprints(prev => ({ ...prev, [studentId]: blueprint }));
+    const { error } = await supabase.from('blueprints')
+      .upsert({ student_id: studentId, user_id: user.id, data: blueprint }, { onConflict: 'student_id,user_id' });
+    if (error) console.error('saveBlueprint error:', error);
+    finishSave(!error);
+    return !error;
+  };
+
   const markDocumentReady = async (studentId: string): Promise<boolean> => {
     if (!user) {
       setSaveState('error');
@@ -352,12 +395,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setStudents([]);
     setStrategies({});
+    setBlueprints({});
   };
 
   return (
     <AppContext.Provider value={{
-      students, schools, strategies, tweaks, saveState, loading, loadError, user,
-      setTweak, saveStudent, saveStudentDraft, seedSampleStudents, deleteStudent, saveStrategy, markDocumentReady, signOut,
+      students, schools, strategies, blueprints, tweaks, saveState, loading, loadError, user,
+      setTweak, saveStudent, saveStudentDraft, seedSampleStudents, deleteStudent, saveStrategy, saveBlueprint, markDocumentReady, signOut,
     }}>
       {children}
     </AppContext.Provider>

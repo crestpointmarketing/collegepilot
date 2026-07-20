@@ -118,8 +118,10 @@ export const profileAssessmentSubmissionSchema = z.object({
 /**
  * Strict structured outputs require additionalProperties:false on every
  * object node; zod's io:'input' conversion leaves objects open. Close them.
+ * Exported so other structured-output schemas (e.g. the Blueprint generator)
+ * reuse the exact same closing rule.
  */
-function closeObjects(node: unknown): unknown {
+export function closeObjects(node: unknown): unknown {
   if (Array.isArray(node)) return node.map(closeObjects);
   if (node && typeof node === 'object') {
     const obj = { ...(node as Record<string, unknown>) };
