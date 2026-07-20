@@ -203,10 +203,26 @@ export async function POST(req: NextRequest) {
             maxTokens: 12000,
           });
 
+          // If the student confirmed a positioning (Stage 1), anchor the
+          // Blueprint's identity to it instead of letting the model re-decide.
+          const pos = student.positioning;
+          const confirmedIdentity = pos && pos.confirmed.length
+            ? pos.confirmed
+                .slice()
+                .sort((a, b) => (a.role === 'primary' ? -1 : b.role === 'primary' ? 1 : 0))
+                .map(c => {
+                  const h = pos.hypotheses.find(x => x.id === c.hypothesisId);
+                  if (!h) return '';
+                  return `- ${c.role.toUpperCase()}: ${h.label}${h.supportingEvidence.length ? ` (evidence: ${h.supportingEvidence.slice(0, 3).join('; ')})` : ''}`;
+                })
+                .filter(Boolean)
+                .join('\n')
+            : undefined;
+
           // Generate the identity spine (Volumes I / III / IV + overview).
           const spine = await callStructured(client, {
             system: BLUEPRINT_SYSTEM_PROMPT,
-            prompt: buildBlueprintSpinePrompt(student, assessment),
+            prompt: buildBlueprintSpinePrompt(student, assessment, confirmedIdentity),
             toolName: 'submit_blueprint_spine',
             description: 'Submit the Blueprint identity spine: overview, identity, positioning, future self, family questions, 30-day plan.',
             inputSchema: blueprintSpineJsonSchema(),

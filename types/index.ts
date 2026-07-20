@@ -111,6 +111,18 @@ export interface Student {
   sampleProfileRevision?: string;
   courses?: Course[];
   projects?: Project[];
+  /**
+   * Stage-0 evidence confirmation, keyed by item (`activity:<id>`,
+   * `award:<id>`, `project:<id>`, or `academics`). Absent = 'provided'
+   * (entered by the family, taken as accurate, not yet self-confirmed).
+   */
+  evidenceStatus?: Record<string, import('@/lib/admissions/journey').EvidenceStatus>;
+  /**
+   * Stage-1 positioning: AI-proposed identity hypotheses, the student's
+   * reactions, and the confirmed convergence (Primary/Secondary/Explore).
+   * The Blueprint Seed is built from `positioning.confirmed`.
+   */
+  positioning?: import('@/lib/admissions/journey').PositioningState;
   // Online presence (optional — verifiable anchors for the assessment layer)
   websiteUrl?: string;
   linkedinUrl?: string;

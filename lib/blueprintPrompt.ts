@@ -52,11 +52,14 @@ function serializeAssessment(a: ProfileAssessment): string {
   ].join('\n\n');
 }
 
-export function buildBlueprintSpinePrompt(student: Student, assessment: ProfileAssessment): string {
+export function buildBlueprintSpinePrompt(student: Student, assessment: ProfileAssessment, confirmedIdentity?: string): string {
+  const confirmedBlock = confirmedIdentity
+    ? `\n=== STUDENT-CONFIRMED IDENTITY (authoritative) ===\nThe student has already reviewed positioning hypotheses and CONFIRMED the identity below. Build Volume I around it — do NOT propose a different core identity. Everything else must cohere with this.\n${confirmedIdentity}\n`
+    : '';
   return `Produce the Identity Spine of a Blueprint for the student below: Executive Overview, Volume I (Identity), Volume III (Positioning), Volume IV (Future Self), family review questions, and a 30-day plan.
 
 Use ONLY the evidence in the profile and the assessment. Interpretations must be labeled working_hypothesis. Anything a résumé claims but that lacks a document is verify or family_confirmed. Distinguish individual contribution from team outcomes in projects.
-
+${confirmedBlock}
 === STUDENT PROFILE ===
 ${serializeStudentProfile(student)}
 
@@ -64,4 +67,31 @@ ${serializeStudentProfile(student)}
 ${serializeAssessment(assessment)}
 
 Now design the person. Be specific to THIS student — every statement must fail the test "could this apply unchanged to hundreds of students?"`;
+}
+
+/* ── Stage 1 · positioning hypotheses ─────────────────────────
+ * The model PROPOSES several evidence-backed identities; it must not pick one.
+ * The student validates and converges afterward.
+ */
+
+export const POSITIONING_SYSTEM_PROMPT = `You are the lead strategist for the Blueprint Method. Your job at this stage is NOT to declare who the student is — it is to propose 3–5 evidence-backed positioning hypotheses the student will then validate.
+
+RULES:
+1. Propose multiple readings, never a single verdict. The student decides which feels like them.
+2. Ground every hypothesis in specific evidence from the profile. Name what is missing before it would be fully supported. State the narrative risk.
+3. Span the kinds where the evidence allows: exactly one core_fit (most directly consistent), plus strategic_adjacent (a valid alternate reading, often a less-crowded admissions field), interdisciplinary (a scarcer crossover), and exploratory (real potential, thinner evidence).
+4. Every label must be specific to THIS student — it must fail the test "could this apply unchanged to hundreds of students?"
+5. Never invent accomplishments, metrics, rankings, or motivations. No admit probabilities. Confidence reflects how well the EVIDENCE supports the reading, not how impressive it sounds.
+6. fieldTypes are academic field / program TYPES (e.g. "Computer Science", "Business + Technology", "Operations Research") — not specific schools.`;
+
+export function buildPositioningPrompt(student: Student, assessment: ProfileAssessment): string {
+  return `Propose 3–5 positioning hypotheses for the student below. Do not pick one — the student will validate them.
+
+=== STUDENT PROFILE ===
+${serializeStudentProfile(student)}
+
+=== COMPUTED ASSESSMENT (ten dimensions; do not restate as numbers) ===
+${serializeAssessment(assessment)}
+
+Return the hypotheses. One must be core_fit; add strategic_adjacent, interdisciplinary, and exploratory readings where the evidence genuinely supports them.`;
 }
