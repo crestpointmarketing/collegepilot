@@ -33,8 +33,13 @@ const blueprintRequestSchema = z.object({
 });
 
 /**
- * Forced tool call with strict structured outputs. Mirrors the helper in
- * app/api/strategy/route.ts (kept local to avoid coupling the two routes).
+ * Forced tool call with schema validation + one retry.
+ *
+ * `strict: true` (default) uses constrained decoding for guaranteed schema
+ * conformance — but the compiled grammar has a size limit. Large schemas (the
+ * Blueprint spine) must pass `strict: false`: a normal forced tool call, no
+ * grammar compilation, with the zod safeParse + retry loop catching any
+ * deviation. Mirrors the helper in app/api/strategy/route.ts.
  */
 async function callStructured<T>(
   client: Anthropic,
@@ -46,31 +51,50 @@ async function callStructured<T>(
     inputSchema: Record<string, unknown>;
     zodSchema: z.ZodType<T>;
     maxTokens: number;
+    strict?: boolean;
   },
 ): Promise<T> {
+  const strict = opts.strict ?? true;
   let feedback = '';
   for (let attempt = 0; attempt < 2; attempt++) {
-    const stream = client.beta.messages.stream({
-      model: MODEL,
-      max_tokens: opts.maxTokens,
-      system: opts.system,
-      betas: ['structured-outputs-2025-11-13'],
-      messages: [{ role: 'user', content: feedback ? `${opts.prompt}\n\nPREVIOUS ATTEMPT FAILED VALIDATION — fix these issues:\n${feedback}` : opts.prompt }],
-      tools: [{
-        name: opts.toolName,
-        description: opts.description,
-        input_schema: opts.inputSchema as Anthropic.Beta.BetaTool['input_schema'],
-        strict: true,
-      }],
-      tool_choice: { type: 'tool', name: opts.toolName },
-    });
+    const content = feedback ? `${opts.prompt}\n\nPREVIOUS ATTEMPT FAILED VALIDATION — fix these issues:\n${feedback}` : opts.prompt;
+    const stream = strict
+      ? client.beta.messages.stream({
+          model: MODEL,
+          max_tokens: opts.maxTokens,
+          system: opts.system,
+          betas: ['structured-outputs-2025-11-13'],
+          messages: [{ role: 'user', content }],
+          tools: [{
+            name: opts.toolName,
+            description: opts.description,
+            input_schema: opts.inputSchema as Anthropic.Beta.BetaTool['input_schema'],
+            strict: true,
+          }],
+          tool_choice: { type: 'tool', name: opts.toolName },
+        })
+      : client.messages.stream({
+          model: MODEL,
+          max_tokens: opts.maxTokens,
+          system: opts.system,
+          messages: [{ role: 'user', content }],
+          tools: [{
+            name: opts.toolName,
+            description: opts.description,
+            input_schema: opts.inputSchema as Anthropic.Tool['input_schema'],
+          }],
+          tool_choice: { type: 'tool', name: opts.toolName },
+        });
     const message = await stream.finalMessage();
     if (message.stop_reason === 'max_tokens') {
       feedback = 'Output was truncated (max_tokens). Be substantially more concise in every field.';
       continue;
     }
-    const block = message.content.find(b => b.type === 'tool_use');
-    if (!block || block.type !== 'tool_use') {
+    // Both the beta and non-beta message shapes expose content blocks with a
+    // `type` discriminator and (for tool_use) an `input`; normalize the union.
+    const blocks = message.content as Array<{ type: string; input?: unknown }>;
+    const block = blocks.find(b => b.type === 'tool_use');
+    if (!block) {
       feedback = 'No tool call was produced.';
       continue;
     }
@@ -188,6 +212,9 @@ export async function POST(req: NextRequest) {
             inputSchema: blueprintSpineJsonSchema(),
             zodSchema: blueprintSpineSchema,
             maxTokens: 16000,
+            // Non-strict: the spine schema is too large for the strict grammar
+            // compiler. zod safeParse + retry enforces conformance instead.
+            strict: false,
           });
 
           const blueprint = assembleBlueprint(student, spine);
