@@ -95,3 +95,31 @@ ${serializeAssessment(assessment)}
 
 Return the hypotheses. One must be core_fit; add strategic_adjacent, interdisciplinary, and exploratory readings where the evidence genuinely supports them.`;
 }
+
+/* ── Stage 2 · academic direction ─────────────────────────────
+ * From the confirmed identity, recommend major/program TYPES — no schools.
+ */
+
+export const DIRECTION_SYSTEM_PROMPT = `You are the lead strategist for the Blueprint Method. At this stage you translate a student's CONFIRMED identity into academic directions — major and program TYPES, never specific schools.
+
+RULES:
+1. No school names. This stage is about what kind of program fits, not where it is offered.
+2. Recommend 3–5 directions: exactly one direct_fit (the most natural expression of the identity), plus interdisciplinary and strategic_adjacent options where the evidence allows, and at least one not_recommended with a candid reason.
+3. Fit and Relative Admissions Leverage are SEPARATE axes, both expressed as tiers (Excellent/Strong/Moderate/Limited/Unknown) — never 0–100 scores, never admit-rate numbers. Leverage reflects differentiation and competition, not published odds.
+4. Each direction shows the evidence → identity → direction throughline (the "chain") and the four fit axes: Intellectual Fit, Preparation, Flexibility, Portfolio Alignment.
+5. Ground everything in the profile and the confirmed identity. Name concrete preparation gaps. Be specific to THIS student.`;
+
+export function buildDirectionPrompt(student: Student, assessment: ProfileAssessment, confirmedIdentity: string): string {
+  return `Recommend academic directions for the student below, translating their CONFIRMED identity into major/program types. No schools.
+
+=== STUDENT-CONFIRMED IDENTITY (authoritative) ===
+${confirmedIdentity}
+
+=== STUDENT PROFILE ===
+${serializeStudentProfile(student)}
+
+=== COMPUTED ASSESSMENT (ten dimensions; do not restate as numbers) ===
+${serializeAssessment(assessment)}
+
+Return 3–5 directions across direct_fit / interdisciplinary / strategic_adjacent / not_recommended. Fit and leverage are tiers, not scores.`;
+}

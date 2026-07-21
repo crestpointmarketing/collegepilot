@@ -123,6 +123,8 @@ export interface Student {
    * The Blueprint Seed is built from `positioning.confirmed`.
    */
   positioning?: import('@/lib/admissions/journey').PositioningState;
+  /** Stage-2 academic direction: recommended major/program types + the student's chosen Primary/Secondary/Explore. */
+  direction?: import('@/lib/admissions/journey').DirectionState;
   // Online presence (optional — verifiable anchors for the assessment layer)
   websiteUrl?: string;
   linkedinUrl?: string;

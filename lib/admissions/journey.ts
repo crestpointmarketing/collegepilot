@@ -211,5 +211,63 @@ export function pathwayLabel(p: ApplicationPathway): string {
     .join(' · ');
 }
 
+/* ── Stage 2 · Academic Direction ──────────────────────────────
+ * From the confirmed identity, recommend major/program TYPES (no schools yet).
+ * Fit and admissions leverage are SEPARATE tier axes — never 0–100 scores.
+ */
+export const DIRECTION_CATEGORY_ORDER = [
+  'direct_fit',         // most natural expression of the identity
+  'interdisciplinary',  // combines strengths into a scarcer crossover
+  'strategic_adjacent', // a valid alternate angle, often a less-crowded field
+  'not_recommended',    // inconsistent with the evidence/goals — with the reason
+] as const;
+export type DirectionCategory = (typeof DIRECTION_CATEGORY_ORDER)[number];
+
+export const DIRECTION_CATEGORY_META: Record<DirectionCategory, { label: string; tag: string }> = {
+  direct_fit:         { label: 'Direct fit',        tag: 'Primary Recommendation' },
+  interdisciplinary:  { label: 'Interdisciplinary', tag: 'Interdisciplinary Advantage' },
+  strategic_adjacent: { label: 'Strategic adjacent', tag: 'Strategic Alternative' },
+  not_recommended:    { label: 'Not recommended',   tag: 'Not Recommended' },
+};
+
+export interface DirectionFitAxis {
+  /** e.g. "Intellectual Fit", "Preparation", "Flexibility", "Portfolio Alignment". */
+  label: string;
+  level: FitLevel;
+}
+
+export interface AcademicDirection {
+  id: string;
+  /** The major / program type, e.g. "Computational Biology", "Business + Technology". */
+  title: string;
+  category: DirectionCategory;
+  /** The evidence → identity → direction throughline. */
+  chain: string;
+  reason: string;
+  /** Interest/evidence fit axes — tiers, never scores. */
+  fitAxes: DirectionFitAxis[];
+  overallFit: FitLevel;
+  /** Relative Admissions Leverage — a tier, NOT an admit rate. */
+  admissionsLeverage: FitLevel;
+  adjacent: string[];
+  preparationGaps: string[];
+}
+
+export interface DirectionSelection {
+  directionId: string;
+  role: DirectionRole;
+}
+
+export interface DirectionState {
+  generatedAt: string;
+  directions: AcademicDirection[];
+  selected: DirectionSelection[];
+}
+
+/** Valid once the student has chosen exactly one primary direction. */
+export function isDirectionConfirmed(d: DirectionState | undefined): boolean {
+  return !!d && d.selected.filter(s => s.role === 'primary').length === 1;
+}
+
 /** Re-export the borrowed tier types so downstream has one import site. */
 export type { ConfidenceLevel, Tier, FitLevel };
