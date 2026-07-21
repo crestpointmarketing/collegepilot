@@ -248,7 +248,7 @@ export function ChatBot() {
     <>
       {open && (
         <div
-          className="fixed bottom-[132px] right-6 z-50 w-[400px] flex flex-col rounded-2xl border border-[var(--border)] bg-white shadow-2xl overflow-hidden"
+          className="no-print fixed bottom-[132px] right-6 z-50 w-[400px] flex flex-col rounded-2xl border border-[var(--border)] bg-white shadow-2xl overflow-hidden"
           style={{ height: '560px' }}
         >
           {/* Header */}
@@ -365,7 +365,7 @@ export function ChatBot() {
       <button
         onClick={() => setOpen(v => !v)}
         title="AI Admissions Advisor"
-        className="fixed bottom-[72px] right-6 z-50 w-12 h-12 rounded-full bg-[var(--accent)] text-white shadow-lg flex items-center justify-center hover:bg-[var(--accent-600)] transition-all hover:scale-105 active:scale-95"
+        className="no-print fixed bottom-[72px] right-6 z-50 w-12 h-12 rounded-full bg-[var(--accent)] text-white shadow-lg flex items-center justify-center hover:bg-[var(--accent-600)] transition-all hover:scale-105 active:scale-95"
       >
         {open ? <X size={20} /> : <MessageSquare size={20} />}
       </button>

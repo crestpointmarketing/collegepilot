@@ -12,11 +12,14 @@ import {
 } from '@/lib/admissions/assessment';
 import { DATA_CYCLE, ENGINE_VERSION } from '@/lib/admissions/engine';
 import { BLUEPRINT_SYSTEM_PROMPT, buildBlueprintSpinePrompt } from '@/lib/blueprintPrompt';
+import { BLUEPRINT_VOLUMES_SYSTEM_PROMPT, buildBlueprintVolumesPrompt } from '@/lib/blueprintPrompt';
 import { blueprintSpineSchema, blueprintSpineJsonSchema, type BlueprintSpineOutput } from '@/lib/admissions/blueprintSchema';
+import { blueprintVolumesSchema, blueprintVolumesJsonSchema, type BlueprintVolumesOutput } from '@/lib/admissions/blueprintVolumesSchema';
 import {
   BLUEPRINT_VERSION,
   collectClaimRegister,
   type Blueprint,
+  type BlueprintRevision,
 } from '@/lib/admissions/blueprint';
 import { createServerSupabaseClient } from '@/lib/supabase.server';
 import { checkRateLimit, rateLimitMessage } from '@/lib/rateLimit';
@@ -105,30 +108,70 @@ async function callStructured<T>(
   throw new Error(`Structured ${opts.toolName} output failed validation after retry: ${feedback.slice(0, 300)}`);
 }
 
-/** Assemble a Blueprint from the generated spine, stubbing volumes filled later. */
-function assembleBlueprint(student: Student, spine: BlueprintSpineOutput): Blueprint {
+const EMPTY_EVIDENCE: Blueprint['evidence'] = { academicFoundation: [], threePillars: [], caseStudies: [], rangeEvidence: [] };
+const EMPTY_PROGRAM_FIT: Blueprint['programFit'] = { needs: [], landscape: [], fitMatrix: [], priorityPrograms: [], roundStrategy: [], bindingPrinciple: '' };
+const EMPTY_NARRATIVE: Blueprint['narrative'] = { masterLine: '', schoolEmphasis: [], commonAppDirections: [], activitiesArchitecture: [], resumeHeadline: '', recommendations: [], interviewStoryBank: [] };
+
+/** "v0.1" → "v0.2". A working draft evolves; the label is a minor bump each regenerate. */
+function nextDraftLabel(prev: string | undefined): string {
+  const m = /^v0\.(\d+)$/.exec(prev ?? '');
+  return m ? `v0.${parseInt(m[1], 10) + 1}` : 'v0.1';
+}
+
+/**
+ * Assemble a Blueprint from the generated spine + volumes (II/V/VI). When the
+ * volumes call failed, `volumes` is null and the empty-but-valid stubs are used
+ * so the Blueprint still saves. Versioning: the draft label bumps each
+ * regenerate and the prior draft is pushed onto the revision history.
+ */
+function assembleBlueprint(
+  student: Student,
+  spine: BlueprintSpineOutput,
+  volumes: BlueprintVolumesOutput | null,
+  prior: Blueprint | null,
+  now: string,
+): Blueprint {
+  const draftLabel = nextDraftLabel(prior?.draftLabel);
+  const revisions: BlueprintRevision[] = prior
+    ? [...(prior.revisions ?? []), { draftLabel: prior.draftLabel, generatedAt: prior.generatedAt, thesis: prior.thesis }]
+    : [];
+
   const base: Omit<Blueprint, 'claimRegister'> = {
     version: BLUEPRINT_VERSION,
-    generatedAt: new Date().toISOString(),
+    generatedAt: now,
     studentId: student.id,
     studentName: student.name,
     status: 'working_draft',
-    draftLabel: 'v0.1',
+    draftLabel,
+    revisions,
     thesis: spine.thesis,
     executiveOverview: spine.executiveOverview,
     identity: spine.identity,
     positioning: spine.positioning,
     futureSelf: spine.futureSelf,
-    // Volumes II / V / VI are generated in later phases; empty-but-valid stubs.
-    evidence: { academicFoundation: [], threePillars: [], caseStudies: [], rangeEvidence: [] },
-    programFit: { needs: [], landscape: [], fitMatrix: [], priorityPrograms: [], roundStrategy: [], bindingPrinciple: '' },
-    narrative: { masterLine: '', schoolEmphasis: [], commonAppDirections: [], activitiesArchitecture: [], resumeHeadline: '', recommendations: [], interviewStoryBank: [] },
+    evidence: volumes?.evidence ?? EMPTY_EVIDENCE,
+    programFit: volumes?.programFit ?? EMPTY_PROGRAM_FIT,
+    narrative: volumes?.narrative ?? EMPTY_NARRATIVE,
     familyReviewQuestions: spine.familyReviewQuestions,
     next30Days: spine.next30Days,
     dataCycle: DATA_CYCLE,
     engineVersion: ENGINE_VERSION,
   };
   return { ...base, claimRegister: collectClaimRegister(base) };
+}
+
+/** Compact identity-spine summary fed to the volumes call so they cohere. */
+function summarizeSpine(spine: BlueprintSpineOutput): string {
+  return [
+    `THESIS: ${spine.thesis}`,
+    `CORE IDENTITY: ${spine.identity.coreIdentity}`,
+    `DISTINCTIVE CAPABILITY: ${spine.identity.distinctiveCapability}`,
+    `POSITIONING STATEMENT: ${spine.identity.positioningStatement.text}`,
+    `POSITIONING DECISION: ${spine.positioning.positioningDecision}`,
+    `ARCHETYPE: ${spine.positioning.archetypeLabel}`,
+    `FUTURE IDENTITY: ${spine.futureSelf.futureIdentity}`,
+    `BEST-FIT ACADEMIC MODEL: ${spine.executiveOverview.bestFitModel}`,
+  ].join('\n');
 }
 
 export async function POST(req: NextRequest) {
@@ -169,6 +212,16 @@ export async function POST(req: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle();
     const storedAssessment = (strategyRow?.data as Strategy | undefined)?.v2?.assessment;
+
+    // Prior blueprint (if any) drives version history — each regenerate bumps
+    // the draft label and pushes the previous draft onto the revision list.
+    const { data: priorRow } = await supabase
+      .from('blueprints')
+      .select('data')
+      .eq('student_id', studentId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    const priorBlueprint = (priorRow?.data as Blueprint | undefined) ?? null;
 
     const rl = checkRateLimit(`blueprint:${user.id}`, 8, 60 * 60 * 1000);
     if (!rl.ok) {
@@ -233,7 +286,26 @@ export async function POST(req: NextRequest) {
             strict: false,
           });
 
-          const blueprint = assembleBlueprint(student, spine);
+          // Volumes II / V / VI — a second call built around the spine. Any
+          // failure here is non-fatal: the Blueprint still saves with the spine
+          // and empty-but-valid volume stubs (never blocks the whole doc).
+          let volumes: BlueprintVolumesOutput | null = null;
+          try {
+            volumes = await callStructured(client, {
+              system: BLUEPRINT_VOLUMES_SYSTEM_PROMPT,
+              prompt: buildBlueprintVolumesPrompt(student, assessment, summarizeSpine(spine)),
+              toolName: 'submit_blueprint_volumes',
+              description: 'Submit Blueprint Volumes II (Evidence), V (Program Fit), and VI (Narrative System).',
+              inputSchema: blueprintVolumesJsonSchema(),
+              zodSchema: blueprintVolumesSchema,
+              maxTokens: 20000,
+              strict: false,
+            });
+          } catch (volErr) {
+            console.error('Blueprint volumes generation failed (spine kept):', volErr);
+          }
+
+          const blueprint = assembleBlueprint(student, spine, volumes, priorBlueprint, new Date().toISOString());
 
           const { error: saveError } = await supabase.from('blueprints')
             .upsert({ student_id: studentId, user_id: user.id, data: blueprint }, { onConflict: 'student_id,user_id' });

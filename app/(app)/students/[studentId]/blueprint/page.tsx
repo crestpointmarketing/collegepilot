@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { ScrollText, Sparkles, RefreshCw, Loader2, AlertCircle, CheckCircle2, Compass, Pencil } from 'lucide-react';
+import { ScrollText, Sparkles, RefreshCw, Loader2, AlertCircle, CheckCircle2, Compass, Pencil, Printer } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { BlueprintDocument } from '@/components/blueprint/BlueprintDocument';
 import { PositioningPanel } from '@/components/blueprint/PositioningPanel';
@@ -160,9 +160,14 @@ export default function BlueprintPage() {
           <p className="text-[var(--muted)] mt-1">Designing the person before the application — starting from who {firstName} is.</p>
         </div>
         {confirmed && !revisiting && blueprint && !busy && (
-          <button onClick={generateBlueprint} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[var(--line-strong)] text-[13px] font-semibold text-[var(--ink)] hover:bg-[var(--bg-soft)] transition-colors">
-            <RefreshCw size={14} /> Regenerate
-          </button>
+          <div className="flex items-center gap-2 no-print">
+            <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[var(--line-strong)] text-[13px] font-semibold text-[var(--ink)] hover:bg-[var(--bg-soft)] transition-colors">
+              <Printer size={14} /> Print / Save PDF
+            </button>
+            <button onClick={generateBlueprint} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[var(--line-strong)] text-[13px] font-semibold text-[var(--ink)] hover:bg-[var(--bg-soft)] transition-colors">
+              <RefreshCw size={14} /> Regenerate
+            </button>
+          </div>
         )}
       </div>
 

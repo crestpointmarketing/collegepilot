@@ -69,6 +69,40 @@ ${serializeAssessment(assessment)}
 Now design the person. Be specific to THIS student — every statement must fail the test "could this apply unchanged to hundreds of students?"`;
 }
 
+/* ── Blueprint Volumes II / V / VI ────────────────────────────
+ * The second Blueprint call. Builds the evidence base, program-fit analysis,
+ * and narrative system AROUND an already-generated identity spine, so every
+ * volume coheres with the confirmed core identity.
+ */
+
+export const BLUEPRINT_VOLUMES_SYSTEM_PROMPT = `${BLUEPRINT_SYSTEM_PROMPT}
+
+You are now writing the EVIDENCE, PROGRAM-FIT, and NARRATIVE volumes of a Blueprint whose identity spine already exists. These volumes must cohere with the given core identity and never contradict it.
+
+ADDITIONAL RULES FOR THESE VOLUMES:
+- Volume II (Evidence): separate fact from interpretation. Turn projects into case studies of HOW the student thinks, in layers (Problem → System → Evaluation → Recognition). Every project's individual-contribution and any metric is a verify item unless a document backs it.
+- Volume V (Program Fit): evaluate at the PROGRAM level, not just the university level. All fit is a tier word (Excellent / Strong / Moderate / Limited / Unknown) — never a 0–100 score, never an admit rate. Do not invent program features you are unsure about; if unknown, say Unknown. The binding principle must protect the family from a bad binding-ED commitment.
+- Volume VI (Narrative): ONE stable core narrative (the master line) with school-specific EXPRESSIONS — never contradictory identities for different schools. Essay directions are scenes to TEST, not written essays or invented facts. Activities are ordered by the single strongest signal each sends.`;
+
+export function buildBlueprintVolumesPrompt(
+  student: Student,
+  assessment: ProfileAssessment,
+  spineSummary: string,
+): string {
+  return `Produce Volumes II (Evidence), V (Program Fit), and VI (Narrative System) for the Blueprint below. They must cohere with the confirmed identity spine — do not re-decide the identity.
+
+=== IDENTITY SPINE (authoritative — build around this) ===
+${spineSummary}
+
+=== STUDENT PROFILE ===
+${serializeStudentProfile(student)}
+
+=== COMPUTED ASSESSMENT (ten dimensions; do not restate as numbers) ===
+${serializeAssessment(assessment)}
+
+Ground every statement in this student's real evidence. Label anything interpretive as working_hypothesis and anything undocumented as verify or family_confirmed. All program fit is a tier word, never a score. Be specific enough that no statement could apply unchanged to hundreds of students.`;
+}
+
 /* ── Stage 1 · positioning hypotheses ─────────────────────────
  * The model PROPOSES several evidence-backed identities; it must not pick one.
  * The student validates and converges afterward.

@@ -366,6 +366,15 @@ export interface Milestone {
 
 export const BLUEPRINT_VERSION = 1 as const;
 
+/** One entry in the Blueprint's revision history — a working draft evolves, it is never "final". */
+export interface BlueprintRevision {
+  /** Draft label, e.g. "v0.1", "v0.2". */
+  draftLabel: string;
+  generatedAt: string;
+  /** The working thesis at that revision, so the history reads as a trajectory. */
+  thesis: string;
+}
+
 export interface Blueprint {
   version: typeof BLUEPRINT_VERSION;
   generatedAt: string;
@@ -375,6 +384,8 @@ export interface Blueprint {
   status: 'working_draft';
   /** Draft revision label surfaced in the header, e.g. "v0.2.1". */
   draftLabel: string;
+  /** Ordered history of prior draft labels (oldest → newest), excluding the current one. */
+  revisions?: BlueprintRevision[];
   /** One-line current working thesis. */
   thesis: string;
   executiveOverview: ExecutiveOverview;

@@ -140,8 +140,11 @@ body {
 
   /* Hide app chrome */
   header,
+  aside,
   [data-tweaks-panel],
-  .tweaks-fab {
+  [data-chatbot],
+  .tweaks-fab,
+  .no-print {
     display: none !important;
   }
 
