@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, Printer } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { PageHeader, AlertCard, GhostButton, PrimaryButton } from '@/components/ui';
 import { CHAR_LIMITS } from '@/lib/characterLimits';
 import type { Activity, Award, Strategy, Student } from '@/types';
 
@@ -33,28 +34,17 @@ export default function DocumentsPage() {
   const hasOverflow = (student.activities?.length ?? 0) > 10 || (student.awards?.length ?? 0) > 5;
 
   return (
-    <div className="animate-fade-in">
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="text-[26px] font-bold tracking-tight text-[var(--ink)]">Generate Documents</h1>
-          <p className="text-[var(--muted)] mt-1">Preview and export Common App–ready content for {student.name}.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded border border-[var(--line-strong)] text-[13.5px] font-medium bg-white hover:bg-[var(--bg-soft)] transition-colors shadow-card"
-          >
-            <Printer size={14} /> Print / Save PDF
-          </button>
-          <button
-            onClick={() => router.push(`/students/${studentId}/downloads`)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium"
-            style={{ background: 'var(--accent)' }}
-          >
-            Go to Downloads <ArrowRight size={14} />
-          </button>
-        </div>
-      </div>
+    <div className="animate-fade-in max-w-[1080px] mx-auto">
+      <PageHeader
+        title="Generate Documents"
+        sub={`Preview and export Common App–ready content for ${student.name}.`}
+        actions={
+          <>
+            <GhostButton onClick={() => window.print()}><Printer size={14} /> Print / Save PDF</GhostButton>
+            <PrimaryButton onClick={() => router.push(`/students/${studentId}/downloads`)}>Go to Downloads <ArrowRight size={14} /></PrimaryButton>
+          </>
+        }
+      />
 
       {/* View toggle */}
       <div className="flex gap-2 mb-5">
@@ -65,12 +55,11 @@ export default function DocumentsPage() {
           <button
             key={opt.key}
             onClick={() => setView(opt.key)}
-            className={`px-4 py-2 rounded text-[13.5px] font-medium border transition-all ${
+            className={`px-4 py-2 rounded-lg text-[13px] font-semibold border transition-colors ${
               view === opt.key
-                ? 'text-white border-transparent'
-                : 'bg-white border-[var(--line-strong)] text-[var(--ink-soft)] hover:bg-[var(--bg-soft)]'
+                ? 'bg-[var(--accent)] text-white border-transparent'
+                : 'bg-white border-[var(--line-strong)] text-[var(--muted)] hover:bg-[var(--bg-soft)]'
             }`}
-            style={view === opt.key ? { background: 'var(--accent)' } : {}}
           >
             {opt.label}
           </button>
@@ -79,16 +68,14 @@ export default function DocumentsPage() {
 
       {/* Overflow warning */}
       {hasOverflow && (
-        <div className="mb-5 p-4 rounded-card border border-[var(--amber-600)] bg-[var(--amber-50)] flex items-start gap-3">
-          <span className="text-[var(--amber-600)]">⚠</span>
-          <div className="text-[13px] text-[var(--amber-600)]">
-            <strong>Common App limits applied.</strong> Showing top 10 activities ({student.activities?.length ?? 0} entered) and top 5 honors ({student.awards?.length ?? 0} entered).
-          </div>
+        <div className="mb-5">
+          <AlertCard tone="warning" title="Common App limits applied"
+            body={`Showing top 10 activities (${student.activities?.length ?? 0} entered) and top 5 honors (${student.awards?.length ?? 0} entered).`} />
         </div>
       )}
 
       {/* Document preview */}
-      <div className="bg-white rounded-card shadow-card p-8 animate-slide-in" key={view}>
+      <div className="bg-white rounded-card shadow-card border border-[var(--line)] p-8 animate-slide-in" key={view}>
         {view === 'strategy' ? (
           <StrategyDoc student={student} strategy={strategy} />
         ) : (
