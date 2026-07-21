@@ -8,6 +8,7 @@ import {
   FileText, Users, PenLine, GraduationCap, Banknote, Send, FolderCheck, ListChecks,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { PageHeader, Chip } from '@/components/ui';
 import { TASK_MATERIALS, deriveTimelineTasks, parsePlanMonth } from '@/lib/timelineTasks';
 
 /* ── Task derivation (stable content-hash ids, shared with the route) ── */
@@ -55,7 +56,7 @@ export default function TimelinePage() {
   if (!strategy) {
     return (
       <div className="animate-fade-in">
-        <Head name={student.name} done={0} total={0} />
+        <PageHeader title="Timeline" sub={`${student.name} · deadline-driven execution plan`} />
         <div className="bg-white rounded-card shadow-card p-16 text-center">
           <div className="w-12 h-12 rounded-full bg-[var(--accent-50)] flex items-center justify-center mx-auto mb-4">
             <Sparkles size={20} style={{ color: 'var(--accent)' }} />
@@ -98,7 +99,11 @@ export default function TimelinePage() {
 
   return (
     <div className="animate-fade-in">
-      <Head name={student.name} done={done} total={tasks.length} />
+      <PageHeader
+        title="Timeline"
+        sub={`${student.name} · deadline-driven execution plan`}
+        actions={tasks.length > 0 ? <Chip tone="accent">{done} of {tasks.length} tasks complete</Chip> : undefined}
+      />
 
       {/* Milestone strip */}
       <div className="bg-white rounded-card shadow-card px-6 py-4 mb-4 overflow-x-auto">
@@ -225,22 +230,6 @@ export default function TimelinePage() {
 }
 
 /* ── Pieces ───────────────────────────────────────────────── */
-
-function Head({ name, done, total }: { name: string; done: number; total: number }) {
-  return (
-    <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
-      <div>
-        <h1 className="text-[28px] font-semibold tracking-tight text-[var(--ink)]">Timeline</h1>
-        <p className="text-[var(--muted)] mt-1">{name} · deadline-driven execution plan</p>
-      </div>
-      {total > 0 && (
-        <span className="text-[12px] font-semibold px-3 py-1.5 rounded-pill bg-[var(--accent-50)] border border-[var(--accent-100)]" style={{ color: 'var(--accent)' }}>
-          {done} of {total} tasks complete
-        </span>
-      )}
-    </div>
-  );
-}
 
 function RiskStat({ label, value, color }: { label: string; value: number; color: string }) {
   return (
