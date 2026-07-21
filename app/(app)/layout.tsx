@@ -33,7 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-full min-h-screen">
       <Sidebar />
       <div className="flex-1 overflow-y-auto" data-scroll>
-        <main className="px-8 pt-8 pb-36 max-w-[1280px] mx-auto">
+        <main className="px-8 pt-8 pb-36 max-w-[1120px] mx-auto">
           {children}
         </main>
       </div>
