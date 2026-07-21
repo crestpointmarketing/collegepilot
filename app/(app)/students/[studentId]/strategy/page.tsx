@@ -994,9 +994,9 @@ export default function StrategyPage() {
       {/* ── Meta banner ── */}
       {strategy.meta && (
         <div className="mb-4 rounded-card border border-[var(--accent-100)] bg-[var(--accent-50)] overflow-hidden">
-          <div className="flex">
+          <div className="flex flex-col sm:flex-row items-stretch">
             {/* Gauge */}
-            <div className="px-5 py-5 flex flex-col items-center justify-center border-r border-[var(--accent-100)] shrink-0 gap-1">
+            <div className="px-5 py-5 flex flex-col items-center justify-center border-b sm:border-b-0 sm:border-r border-[var(--accent-100)] shrink-0 gap-1">
               <ProbabilityGauge
                 value={strategy.meta.overall_success_probability}
                 adjusted={!v2 && hasActiveLevers ? adjustedProb : undefined}
@@ -1024,53 +1024,43 @@ export default function StrategyPage() {
 
               {/* Shutout risk + coverage (v2 audit) */}
               {v2 && <ShutoutStrip portfolio={v2.portfolio} />}
-
-              {/* Structured improvement levers (v2) — grade movements, no fake pp math */}
-              {v2 && v2.levers.length > 0 && (
-                <div className="border-t border-[var(--accent-100)] pt-3">
-                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--accent)] mb-2">
-                    <Zap size={11} /> Improvement Levers — deadline-bound actions that move profile grades
-                  </div>
-                  <V2LeverList levers={v2.levers} />
-                </div>
-              )}
-
-              {/* Interactive levers (v1 legacy simulator) */}
-              {!v2 && parsedLevers.length > 0 && (
-                <div className="border-t border-[var(--accent-100)] pt-3">
-                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--accent)] mb-2">
-                    <Zap size={11} /> Simulate Improvements — apply items to preview probability changes
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {parsedLevers.map((parsed, i) => (
-                      <LeverCard
-                        key={i}
-                        index={i}
-                        parsed={parsed}
-                        state={leverStates[i]}
-                        onChange={handleLeverChange}
-                      />
-                    ))}
-                  </div>
-                  {hasActiveLevers && (
-                    <div className="mt-3 flex items-center gap-2 text-[12px] text-[var(--ink-soft)]">
-                      <span>Adjusted P(≥1 admit):</span>
-                      <span className="font-bold text-emerald-600">{adjustedProb}%</span>
-                      {adjustedProb !== originalProb && (
-                        <span className={`font-semibold ${adjustedProb > originalProb ? 'text-emerald-500' : 'text-red-400'}`}>
-                          ({adjustedProb > originalProb ? '+' : ''}{adjustedProb - originalProb}pp vs baseline)
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>
       )}
 
       <div className="flex flex-col gap-4">
+
+        {/* Improvement Levers — its own card so the outlook banner stays compact */}
+        {strategy.meta && v2 && v2.levers.length > 0 && (
+          <StratCard num="Actions" title="Improvement Levers" icon={<Zap size={16} />}>
+            <p className="text-[12px] text-[var(--muted)] -mt-1 mb-3.5">
+              Deadline-bound actions that move profile grades — effects are grade movements, not fabricated percentage points.
+            </p>
+            <V2LeverList levers={v2.levers} />
+          </StratCard>
+        )}
+        {strategy.meta && !v2 && parsedLevers.length > 0 && (
+          <StratCard num="Simulate" title="Simulate Improvements" icon={<Zap size={16} />}>
+            <p className="text-[12px] text-[var(--muted)] -mt-1 mb-3.5">Apply items to preview how the portfolio probability changes.</p>
+            <div className="flex flex-col gap-2">
+              {parsedLevers.map((parsed, i) => (
+                <LeverCard key={i} index={i} parsed={parsed} state={leverStates[i]} onChange={handleLeverChange} />
+              ))}
+            </div>
+            {hasActiveLevers && (
+              <div className="mt-3 flex items-center gap-2 text-[12px] text-[var(--ink-soft)]">
+                <span>Adjusted P(≥1 admit):</span>
+                <span className="font-bold text-emerald-600">{adjustedProb}%</span>
+                {adjustedProb !== originalProb && (
+                  <span className={`font-semibold ${adjustedProb > originalProb ? 'text-emerald-500' : 'text-red-400'}`}>
+                    ({adjustedProb > originalProb ? '+' : ''}{adjustedProb - originalProb}pp vs baseline)
+                  </span>
+                )}
+              </div>
+            )}
+          </StratCard>
+        )}
 
         {/* 01 Positioning */}
         <StratCard num="01" title="Positioning" icon={<User size={16} />}>
