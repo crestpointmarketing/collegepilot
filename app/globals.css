@@ -2,27 +2,34 @@
 
 /* ── Runtime-mutable CSS variables (Tweaks panel writes to these) ── */
 :root {
-  --accent: #635bff;
-  --accent-600: #5851e6;
-  --accent-50: #f3f2ff;
-  --accent-100: #e7e5ff;
+  /* Warm-minimalist palette (Figma "warm-ripple" design standard) */
+  --accent: #4f46e5;        /* refined indigo */
+  --accent-600: #4338ca;
+  --accent-50: #eef2ff;
+  --accent-100: #dde1fb;
 
-  --ink: #0a2540;
-  --ink-soft: #425466;
-  --muted: #697386;
-  --muted-2: #8792a2;
-  --line: #e6ebf1;
-  --line-strong: #d1d9e0;
-  --bg: #ffffff;
-  --bg-soft: #f6f9fc;
-  --bg-deep: #f0f4f8;
+  --ink: #1b2033;           /* deep navy-charcoal */
+  --ink-soft: #3a445c;
+  --muted: #64748b;         /* muted blue-gray */
+  --muted-2: #94a3b8;
+  --line: rgba(27, 32, 51, 0.08);
+  --line-strong: rgba(27, 32, 51, 0.15);
+  --bg: #ffffff;            /* cards */
+  --bg-soft: #f8f7f4;       /* warm off-white ground */
+  --bg-deep: #f1f0ea;
 
-  --green-50: #ecfdf5;  --green-600: #047857;
-  --amber-50: #fffbeb;  --amber-600: #b45309;
-  --slate-50: #f1f5f9;  --slate-600: #475569;
-  --red-50: #fef2f2;    --red-600: #b91c1c;
+  /* Semantic status (--cp-*) — one tone vocabulary */
+  --cp-positive: #16a34a;  --cp-positive-bg: #dcfce7;
+  --cp-warning:  #d97706;  --cp-warning-bg:  #fef3c7;
+  --cp-critical: #dc2626;  --cp-critical-bg: #fee2e2;
+  --cp-info:     #3b82f6;  --cp-info-bg:     #dbeafe;
 
-  --card-shadow: 0 0 0 1px rgba(60, 66, 87, 0.06), 0 1px 1px rgba(0, 0, 0, 0.04);
+  --green-50: #dcfce7;  --green-600: #15803d;
+  --amber-50: #fef3c7;  --amber-600: #b45309;
+  --slate-50: #f1f2f5;  --slate-600: #4b5563;
+  --red-50: #fee2e2;    --red-600: #b91c1c;
+
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 /* ── Tailwind v4 CSS-first theme ── */
@@ -33,23 +40,23 @@
   --color-accent-50: var(--accent-50);
   --color-accent-100: var(--accent-100);
 
-  /* Neutrals */
-  --color-ink: #0a2540;
-  --color-ink-soft: #425466;
-  --color-muted: #697386;
-  --color-line: #e6ebf1;
-  --color-line-strong: #d1d9e0;
-  --color-bg-soft: #f6f9fc;
-  --color-bg-deep: #f0f4f8;
+  /* Neutrals (warm-minimalist) */
+  --color-ink: #1b2033;
+  --color-ink-soft: #3a445c;
+  --color-muted: #64748b;
+  --color-line: rgba(27, 32, 51, 0.08);
+  --color-line-strong: rgba(27, 32, 51, 0.15);
+  --color-bg-soft: #f8f7f4;
+  --color-bg-deep: #f1f0ea;
 
   /* Status */
-  --color-green-50: #ecfdf5;
-  --color-green-600: #047857;
-  --color-amber-50: #fffbeb;
+  --color-green-50: #dcfce7;
+  --color-green-600: #15803d;
+  --color-amber-50: #fef3c7;
   --color-amber-600: #b45309;
-  --color-slate-50: #f1f5f9;
-  --color-slate-600: #475569;
-  --color-red-50: #fef2f2;
+  --color-slate-50: #f1f2f5;
+  --color-slate-600: #4b5563;
+  --color-red-50: #fee2e2;
   --color-red-600: #b91c1c;
 
   /* Font */
@@ -60,14 +67,14 @@
   --tracking-tighter: -0.035em;
 
   /* Shadows */
-  --shadow-card: 0 0 0 1px rgba(60, 66, 87, 0.06), 0 1px 1px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
   --shadow-card-hover: 0 0 0 1px rgba(60, 66, 87, 0.08), 0 2px 5px rgba(60,66,87,0.08);
   --shadow-login: 0 0 0 1px rgba(60,66,87,0.04), 0 8px 24px rgba(60,66,87,0.08), 0 1px 2px rgba(0,0,0,0.05);
   --shadow-drawer: -8px 0 32px rgba(10, 37, 64, 0.12);
   --shadow-focus: 0 0 0 3px var(--accent-100);
 
   /* Border radius */
-  --radius-card: 10px;
+  --radius-card: 12px;
   --radius-pill: 9999px;
 
   /* Animations */
