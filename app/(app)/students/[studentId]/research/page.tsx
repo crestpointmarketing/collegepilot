@@ -658,7 +658,7 @@ export default function ResearchPage() {
     <div className="max-w-[1100px] mx-auto">
       {/* Header */}
       <div className="mb-5">
-        <h1 className="text-[28px] font-bold text-[var(--ink)] tracking-tight mb-1">Admission Intelligence</h1>
+        <h1 className="text-[26px] font-bold text-[var(--ink)] tracking-tight mb-1">Admission Intelligence</h1>
         <p className="text-[14px] text-[var(--ink-soft)]">
           {activeStudent ? `Why each school fits ${activeStudent.name}, how to apply, and live school research` : 'School fit, application strategy, and live research'}
         </p>

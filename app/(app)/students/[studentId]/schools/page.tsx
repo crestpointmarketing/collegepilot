@@ -174,7 +174,7 @@ export default function SchoolsPage() {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight text-[var(--ink)]">Find Your Best-Fit Schools</h1>
+          <h1 className="text-[26px] font-bold tracking-tight text-[var(--ink)]">Find Your Best-Fit Schools</h1>
           {activeStudent && (
             <p className="text-[var(--muted)] mt-1">
               Showing fit scores for <span className="font-medium text-[var(--ink-soft)]">{activeStudent.name}</span>

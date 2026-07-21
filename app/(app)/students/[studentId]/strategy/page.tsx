@@ -1425,7 +1425,7 @@ function PageHead({ title, sub, actions }: { title: string; sub: string; actions
   return (
     <div className="flex items-start justify-between mb-6">
       <div>
-        <h1 className="text-[28px] font-semibold tracking-tight text-[var(--ink)]">{title}</h1>
+        <h1 className="text-[26px] font-bold tracking-tight text-[var(--ink)]">{title}</h1>
         <p className="text-[var(--muted)] mt-1">{sub}</p>
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}

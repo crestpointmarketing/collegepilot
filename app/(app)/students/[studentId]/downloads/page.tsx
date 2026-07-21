@@ -115,7 +115,7 @@ export default function DownloadsPage() {
   return (
     <div className="animate-fade-in">
       <div className="mb-8">
-        <h1 className="text-[28px] font-semibold tracking-tight text-[var(--ink)]">Downloads</h1>
+        <h1 className="text-[26px] font-bold tracking-tight text-[var(--ink)]">Downloads</h1>
         <p className="text-[var(--muted)] mt-1">Export strategy and Common App materials for {student.name}.</p>
       </div>
 

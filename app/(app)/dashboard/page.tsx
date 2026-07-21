@@ -43,7 +43,7 @@ export default function DashboardPage() {
       {/* Page header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight text-[var(--ink)]">Students</h1>
+          <h1 className="text-[26px] font-bold tracking-tight text-[var(--ink)]">Students</h1>
           <p className="text-[var(--muted)] mt-1">Manage applicant strategies and Common App–ready outputs.</p>
         </div>
         <div className="flex items-center gap-2">

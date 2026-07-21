@@ -495,7 +495,7 @@ export default function ProfilePage() {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight text-[var(--ink)]">
+          <h1 className="text-[26px] font-bold tracking-tight text-[var(--ink)]">
             {existingStudent ? 'Edit Student Profile' : 'Create Student Profile'}
           </h1>
           <p className="text-[var(--muted)] mt-1">Complete each step, then save a draft or continue to strategy.</p>
