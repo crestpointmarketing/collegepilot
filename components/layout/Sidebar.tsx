@@ -16,7 +16,7 @@ function ReadinessRing({ pct }: { pct: number }) {
       <circle cx={34} cy={34} r={r} stroke="rgba(255,255,255,0.14)" strokeWidth={6} fill="none" />
       <circle
         cx={34} cy={34} r={r}
-        stroke="#38bdf8" strokeWidth={6} fill="none" strokeLinecap="round"
+        stroke="#4f46e5" strokeWidth={6} fill="none" strokeLinecap="round"
         strokeDasharray={`${(pct / 100) * c} ${c}`}
         transform="rotate(-90 34 34)"
       />
@@ -42,7 +42,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-[236px] h-full flex flex-col shrink-0 z-30 bg-[#0f2a47] text-white">
+    <aside className="w-[240px] h-full flex flex-col shrink-0 z-30 bg-[#1b2033] text-white">
       <Link href="/dashboard" className="px-5 py-5 flex items-center gap-2.5 border-b border-white/10">
         <RadarIcon size={22} />
         <span className="font-semibold text-[14.5px] tracking-tight text-white">CollegePilot</span>
@@ -73,7 +73,7 @@ export function Sidebar() {
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center justify-between px-1 py-1">
           <div className="flex min-w-0 items-center gap-2.5" title={userDisplay?.label}>
-            <Avatar name={userDisplay?.initials ?? '?'} color="#38bdf8" size={30} />
+            <Avatar name={userDisplay?.initials ?? '?'} color="#4f46e5" size={30} />
             <div className="truncate text-[13px] font-medium text-white/90">
               {userDisplay?.label ?? 'Loading account...'}
             </div>
