@@ -19,7 +19,7 @@ NON-NEGOTIABLE RULES:
 4. School traits: if the trait is in the provided SCHOOL FACTS, mark schoolHookStatus verified. Anything else you believe about the school (labs, professors, courses, mottos) is unverified — say so, and phrase it as something the student must confirm on the official page. Never state an unverified trait as fact.
 5. Be honest about risks: how often readers see this move (cliché), and where it would overlap the Common App essay or sibling supplementals listed.
 6. Each angle ends in open questions the STUDENT must answer — the essay comes from their answers, not from you.
-7. Every angle is a working hypothesis for the student to react to. Diversity matters: the 3–5 angles should take genuinely different doors into the prompt, not variations of one idea.`;
+7. Every angle is a working hypothesis for the student to react to. Diversity matters: the 3–4 angles should take genuinely different doors into the prompt, not variations of one idea. Keep each field tight and concrete — no padding.`;
 
 export function buildAngleMinerPrompt(opts: {
   student: Student;
@@ -41,12 +41,14 @@ export function buildAngleMinerPrompt(opts: {
         .join('\n')
     : '(none on file — every school trait you use is unverified)';
 
+  // Old blueprints may predate the narrative volume — access defensively.
+  const nar = blueprint?.narrative;
   const blueprintBlock = blueprint
     ? `BLUEPRINT NARRATIVE SYSTEM (authoritative for story coherence):
-- Master line: ${blueprint.narrative.masterLine || blueprint.thesis}
-- Core identity: ${blueprint.identity.coreIdentity}
-- School emphasis on file: ${blueprint.narrative.schoolEmphasis.map(s => `${s.context}: ${s.emphasis}`).join(' | ') || '(none)'}
-- Common App directions already planned: ${blueprint.narrative.commonAppDirections.map(d => d.direction).join(' | ') || '(none)'}`
+- Master line: ${nar?.masterLine || blueprint.thesis || blueprint.identity?.coreIdentity || '(none)'}
+- Core identity: ${blueprint.identity?.coreIdentity ?? '(none)'}
+- School emphasis on file: ${(nar?.schoolEmphasis ?? []).map(s => `${s.context}: ${s.emphasis}`).join(' | ') || '(none)'}
+- Common App directions already planned: ${(nar?.commonAppDirections ?? []).map(d => d.direction).join(' | ') || '(none)'}`
     : 'BLUEPRINT: not generated yet — anchor to the confirmed focus below and the raw evidence.';
 
   return `Mine 3–5 essay ANGLES for the prompt below. Directions to test, never prose.

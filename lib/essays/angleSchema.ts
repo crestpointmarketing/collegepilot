@@ -18,7 +18,7 @@ export const essayAngleSchema = z.object({
 });
 
 export const angleMinerOutputSchema = z.object({
-  angles: z.array(essayAngleSchema).min(3).max(5),
+  angles: z.array(essayAngleSchema).min(3).max(4),
 });
 export type AngleMinerOutput = z.infer<typeof angleMinerOutputSchema>;
 

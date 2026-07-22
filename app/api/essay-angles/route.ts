@@ -41,7 +41,7 @@ async function mineAngles(client: Anthropic, system: string, prompt: string, all
     const content = feedback ? `${prompt}\n\nPREVIOUS ATTEMPT REJECTED — fix these issues:\n${feedback}` : prompt;
     const stream = client.messages.stream({
       model: MODEL,
-      max_tokens: 9000,
+      max_tokens: 6000,
       system,
       messages: [{ role: 'user', content }],
       tools: [{
