@@ -71,7 +71,7 @@ export default function AssessmentPage() {
                 <button
                   key={k}
                   onClick={() => setSel(i)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${sel === i ? 'bg-[#EEF0F8]' : 'hover:bg-[var(--bg-soft)]'}`}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${sel === i ? 'bg-[var(--accent-50)]' : 'hover:bg-[var(--bg-soft)]'}`}
                 >
                   <span className="text-[11px] text-[var(--muted-2)] w-4 text-right shrink-0">{i + 1}</span>
                   <span className="text-[13px] font-medium text-[var(--ink)] w-44 shrink-0 leading-tight">{DIMENSION_LABELS[k]}</span>
@@ -120,7 +120,7 @@ export default function AssessmentPage() {
             </div>
             <Link
               href={`/students/${studentId}/strategy`}
-              className="mt-5 w-full inline-flex items-center justify-center py-2 text-[13px] font-semibold text-[var(--accent)] border border-[var(--accent-100)] rounded-lg hover:bg-[#EEF0F8] transition-colors"
+              className="mt-5 w-full inline-flex items-center justify-center py-2 text-[13px] font-semibold text-[var(--accent)] border border-[var(--accent-100)] rounded-lg hover:bg-[var(--accent-50)] transition-colors"
             >
               View in full strategy
             </Link>

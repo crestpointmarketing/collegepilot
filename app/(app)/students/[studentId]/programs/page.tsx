@@ -106,7 +106,7 @@ export default function ProgramsPage() {
                 <div className="flex flex-wrap items-center gap-2 mb-1.5">
                   <Chip tone={BUCKET_TONE[p.bucket] ?? 'accent'}>{p.likelihood}</Chip>
                   <Chip tone="neutral">{p.round}</Chip>
-                  <span className="text-[11px] text-[var(--accent)] font-semibold bg-[#EEF0F8] px-2 py-0.5 rounded-full">{p.leverage}</span>
+                  <span className="text-[11px] text-[var(--accent)] font-semibold bg-[var(--accent-50)] px-2 py-0.5 rounded-full">{p.leverage}</span>
                 </div>
                 <h3 className="text-[15px] font-bold text-[var(--ink)]">{p.university}</h3>
                 <p className="text-[12.5px] text-[var(--muted)]">{p.program}</p>

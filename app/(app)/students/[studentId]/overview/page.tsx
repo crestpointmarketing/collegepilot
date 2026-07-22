@@ -61,14 +61,18 @@ export default function OverviewPage() {
     : 0;
   const stageLabel = ['Evidence', 'Identity', 'Direction', 'Programs', 'Portfolio', 'Blueprint'][current];
 
-  // Next best action — dynamic from real state.
+  // Next best action — follows the journey order Identity → Direction → Programs/Portfolio → Blueprint.
   const nba = !positioning?.hypotheses?.length
     ? { title: `Discover ${firstName}'s positioning`, body: 'Generate evidence-backed identity hypotheses. Validating them unlocks Academic Direction and school recommendations.', cta: 'Start positioning', href: `/students/${studentId}/blueprint`, icon: <Compass size={14} /> }
     : !confirmed
       ? { title: 'Validate your identity hypotheses', body: `Several positioning hypotheses are ready for ${firstName} to review. Confirming one unlocks the rest of the journey.`, cta: 'Review hypotheses', href: `/students/${studentId}/blueprint`, icon: <Sparkles size={14} /> }
-      : !blueprint
-        ? { title: 'Generate the full Blueprint', body: 'Identity is confirmed. Build the six-volume strategy book — every claim carries an evidence label.', cta: 'Build Blueprint', href: `/students/${studentId}/blueprint`, icon: <ScrollText size={14} /> }
-        : { title: 'Review your strategy & school list', body: 'Your Blueprint is ready. Refine the school portfolio and application rounds.', cta: 'Open strategy', href: `/students/${studentId}/strategy`, icon: <ArrowRight size={14} /> };
+      : !directionDone
+        ? { title: 'Choose an academic direction', body: 'Identity is confirmed. Translate it into major and program types before building the school list.', cta: 'Explore directions', href: `/students/${studentId}/direction`, icon: <Compass size={14} /> }
+        : !v2
+          ? { title: 'Generate the strategy & school list', body: 'Direction is set. Run the engine to produce the Reach / Match / Safety list and application pathways.', cta: 'Generate strategy', href: `/students/${studentId}/strategy`, icon: <Sparkles size={14} /> }
+          : !blueprint
+            ? { title: 'Build the full Blueprint', body: 'The portfolio is in place. Build the six-volume strategy book — every claim carries an evidence label.', cta: 'Build Blueprint', href: `/students/${studentId}/blueprint`, icon: <ScrollText size={14} /> }
+            : { title: 'Review the portfolio & Blueprint', body: 'Everything is generated. Refine the school portfolio, rounds, and narrative.', cta: 'Open Portfolio', href: `/students/${studentId}/portfolio`, icon: <ArrowRight size={14} /> };
 
   // Snapshot
   const evidenceCount = student.activities.length + student.awards.length + (student.projects?.length ?? 0);

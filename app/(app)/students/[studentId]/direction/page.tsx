@@ -175,7 +175,7 @@ export default function DirectionPage() {
                       <div>
                         <Eyebrow>Adjacent directions</Eyebrow>
                         <div className="flex flex-wrap gap-1.5 mt-1.5">
-                          {d.adjacent.map((a, i) => <span key={i} className="px-2.5 py-1 bg-[#EEF0F8] text-[var(--accent)] text-[12px] rounded-full">{a}</span>)}
+                          {d.adjacent.map((a, i) => <span key={i} className="px-2.5 py-1 bg-[var(--accent-50)] text-[var(--accent)] text-[12px] rounded-full">{a}</span>)}
                         </div>
                       </div>
                     )}
