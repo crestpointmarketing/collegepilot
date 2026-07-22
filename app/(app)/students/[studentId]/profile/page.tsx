@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, GripVertical, Trash2, Plus, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { PageHeader, PrimaryButton, GhostButton } from '@/components/ui';
 import { Field } from '@/components/shared/Field';
 import { Counter } from '@/components/shared/Counter';
 import { ChipGroup } from '@/components/shared/ChipGroup';
@@ -124,7 +125,7 @@ function SchoolPicker({ ids, onChange }: { ids: string[]; onChange: (ids: string
       )}
       <div className="relative">
         <input
-          className="w-full px-3 py-2 rounded border border-[var(--line-strong)] text-[13.5px] bg-white focus:outline-none focus:border-[var(--accent)] focus:shadow-focus transition-all"
+          className="w-full px-3 py-2 rounded-lg border border-[var(--line-strong)] text-[13.5px] bg-white focus:outline-none focus:border-[var(--accent)] focus:shadow-focus transition-all"
           value={q}
           onChange={e => {
             const v = e.target.value;
@@ -487,29 +488,21 @@ export default function ProfilePage() {
     if (ok) router.push('/dashboard');
   };
 
-  const inp = 'w-full px-3 py-2 rounded border border-[var(--line-strong)] text-[13.5px] bg-white focus:outline-none focus:border-[var(--accent)] focus:shadow-focus transition-all';
+  const inp = 'w-full px-3 py-2 rounded-lg border border-[var(--line-strong)] text-[13.5px] bg-white focus:outline-none focus:border-[var(--accent)] focus:shadow-focus transition-all';
   const inpErr = 'border-red-400 focus:border-red-500 focus:shadow-none';
 
   return (
     <div className="animate-fade-in max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="text-[26px] font-bold tracking-tight text-[var(--ink)]">
-            {existingStudent ? 'Edit Student Profile' : 'Create Student Profile'}
-          </h1>
-          <p className="text-[var(--muted)] mt-1">Complete each step, then save a draft or continue to strategy.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <SaveIndicator state={saveState} />
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="px-3 py-2 rounded text-[13.5px] font-medium text-[var(--ink-soft)] hover:bg-[var(--bg-soft)] transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title={isNew ? 'New Student' : 'Evidence'}
+        sub="The facts behind the strategy — everything here is taken as accurate; confirm what you've checked."
+        actions={
+          <>
+            <SaveIndicator state={saveState} />
+            <GhostButton onClick={() => router.push('/dashboard')}>Cancel</GhostButton>
+          </>
+        }
+      />
 
       <Stepper currentStep={step} />
 
@@ -973,28 +966,19 @@ export default function ProfilePage() {
 
       {/* Footer navigation */}
       <div className="flex items-center justify-between">
-        <button
-          onClick={() => step === 1 ? router.push('/dashboard') : setStep(step - 1)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded border border-[var(--line-strong)] text-[13.5px] font-medium text-[var(--ink-soft)] bg-white hover:bg-[var(--bg-soft)] transition-colors shadow-card"
-        >
-          <ArrowLeft size={14} />
-          {step === 1 ? 'Cancel' : 'Back'}
-        </button>
+        <GhostButton onClick={() => step === 1 ? router.push('/dashboard') : setStep(step - 1)}>
+          <ArrowLeft size={14} /> {step === 1 ? 'Cancel' : 'Back'}
+        </GhostButton>
         <div className="flex items-center gap-2">
           <button
             onClick={handleDraft}
-            className="px-4 py-2 rounded text-[13.5px] font-medium text-[var(--ink-soft)] hover:bg-[var(--bg-soft)] transition-colors"
+            className="px-4 py-2 rounded-lg text-[13.5px] font-medium text-[var(--ink-soft)] hover:bg-[var(--bg-soft)] transition-colors"
           >
             Save Draft
           </button>
-          <button
-            onClick={next}
-            className="flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium"
-            style={{ background: 'var(--accent)' }}
-          >
-            {step < STEPS.length ? 'Next' : 'Submit & Continue'}
-            <ArrowRight size={14} />
-          </button>
+          <PrimaryButton onClick={next}>
+            {step < STEPS.length ? 'Next' : 'Submit & Continue'} <ArrowRight size={14} />
+          </PrimaryButton>
         </div>
       </div>
     </div>
