@@ -37,7 +37,7 @@ function evidenceExists(cited: string, allowed: string[]): boolean {
 
 async function mineAngles(client: Anthropic, system: string, prompt: string, allowed: string[]): Promise<AngleMinerOutput> {
   let feedback = '';
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     const content = feedback ? `${prompt}\n\nPREVIOUS ATTEMPT REJECTED — fix these issues:\n${feedback}` : prompt;
     const stream = client.messages.stream({
       model: MODEL,
@@ -54,7 +54,12 @@ async function mineAngles(client: Anthropic, system: string, prompt: string, all
     const message = await stream.finalMessage();
     const block = message.content.find(b => b.type === 'tool_use');
     if (!block || block.type !== 'tool_use') { feedback = 'No tool call was produced.'; continue; }
-    const parsed = angleMinerOutputSchema.safeParse(block.input);
+    // Non-strict tool calls sometimes return the array as a JSON string — unwrap.
+    const input = block.input as Record<string, unknown>;
+    if (typeof input?.angles === 'string') {
+      try { input.angles = JSON.parse(input.angles); } catch { /* leave for zod to reject */ }
+    }
+    const parsed = angleMinerOutputSchema.safeParse(input);
     if (!parsed.success) {
       feedback = parsed.error.issues.slice(0, 5).map(i => `${i.path.join('.')}: ${i.message}`).join('\n');
       continue;
