@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { MessageSquare, X, Send, Loader2, Bot, RotateCcw, ChevronDown } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { Markdown } from '@/components/chat/Markdown';
 import { createClient } from '@/lib/supabase';
 import type { Student, Strategy } from '@/types';
 
@@ -51,15 +52,11 @@ function MessageBubble({ msg, isStreaming }: { msg: Message; isStreaming: boolea
         </span>
       );
     }
-    return text.split('\n').map((line, i, arr) => {
-      const parts = line.split(/\*\*(.*?)\*\*/g);
-      return (
-        <span key={i}>
-          {parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)}
-          {i < arr.length - 1 && <br />}
-        </span>
-      );
-    });
+    // Assistant answers arrive as markdown — render it. User messages stay plain.
+    if (!isUser) return <Markdown text={text} />;
+    return text.split('\n').map((line, i, arr) => (
+      <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+    ));
   }
 
   return (
