@@ -44,7 +44,7 @@ export function NavLinks() {
     : ALL_STUDENT_NAV.find(n => pathname.endsWith(`/${n.id}`) || pathname.includes(`/${n.id}/`))?.id;
 
   const itemCls = (active: boolean) =>
-    `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
+    `flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium transition-colors ${
       active ? 'bg-[rgba(79,70,229,0.2)] text-white' : 'text-[#c7cafe] hover:bg-white/[0.06] hover:text-white'
     }`;
 
@@ -70,11 +70,11 @@ export function NavLinks() {
 
       {currentStudentId && (
         <>
-          <div className="mx-3 my-2 border-t border-white/10" />
-          <div className="px-3 py-1 text-[10.5px] font-semibold uppercase tracking-widest text-[#8b94b2]">Blueprint Journey</div>
+          <div className="mx-3 my-1.5 border-t border-white/10" />
+          <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-[#8b94b2]">Blueprint Journey</div>
           {JOURNEY_NAV.map(renderItem)}
 
-          <div className="mx-3 my-2 border-t border-white/10" />
+          <div className="mx-3 my-1.5 border-t border-white/10" />
           {UTILITY_NAV.map(renderItem)}
         </>
       )}

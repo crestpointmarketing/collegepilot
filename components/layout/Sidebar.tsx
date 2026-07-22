@@ -10,18 +10,18 @@ import { getUserDisplay } from '@/lib/userDisplay';
 import { computeReadiness } from '@/components/assessment/ui';
 
 function ReadinessRing({ pct }: { pct: number }) {
-  const r = 26, c = 2 * Math.PI * r;
+  const r = 20, c = 2 * Math.PI * r;
   return (
-    <svg width={68} height={68} viewBox="0 0 68 68">
-      <circle cx={34} cy={34} r={r} stroke="rgba(255,255,255,0.14)" strokeWidth={6} fill="none" />
+    <svg width={52} height={52} viewBox="0 0 52 52">
+      <circle cx={26} cy={26} r={r} stroke="rgba(255,255,255,0.14)" strokeWidth={5} fill="none" />
       <circle
-        cx={34} cy={34} r={r}
-        stroke="#4f46e5" strokeWidth={6} fill="none" strokeLinecap="round"
+        cx={26} cy={26} r={r}
+        stroke="#4f46e5" strokeWidth={5} fill="none" strokeLinecap="round"
         strokeDasharray={`${(pct / 100) * c} ${c}`}
-        transform="rotate(-90 34 34)"
+        transform="rotate(-90 26 26)"
       />
-      <text x={34} y={32} textAnchor="middle" fontSize={15} fontWeight={700} fill="#fff">{pct}%</text>
-      <text x={34} y={45} textAnchor="middle" fontSize={8} fill="rgba(255,255,255,0.55)">Overall</text>
+      <text x={26} y={25} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff">{pct}%</text>
+      <text x={26} y={35} textAnchor="middle" fontSize={7} fill="rgba(255,255,255,0.55)">Overall</text>
     </svg>
   );
 }
@@ -43,35 +43,35 @@ export function Sidebar() {
 
   return (
     <aside className="w-[240px] h-full flex flex-col shrink-0 z-30 bg-[#1b2033] text-white">
-      <Link href="/dashboard" className="px-5 py-5 flex items-center gap-2.5 border-b border-white/10">
+      <Link href="/dashboard" className="px-5 py-3.5 flex items-center gap-2.5 border-b border-white/10">
         <RadarIcon size={22} />
         <span className="font-semibold text-[14.5px] tracking-tight text-white">CollegePilot</span>
       </Link>
 
-      <div className="flex-1 py-4 overflow-y-auto">
+      <div className="flex-1 py-2.5 overflow-y-auto">
         <NavLinks />
       </div>
 
       {/* Evidence readiness — only when the active student has a v2 strategy */}
       {readiness && (
         <div
-          className="mx-4 mb-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3"
+          className="mx-4 mb-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
           title="How well-anchored the profile assessment is, from per-dimension confidence. A display heuristic — not an admission metric."
         >
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-white/60 mb-1.5">Evidence Readiness</div>
           <div className="flex items-center gap-3">
             <ReadinessRing pct={readiness.pct} />
-            <div className="flex flex-col gap-1 text-[11px]">
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" /> High <span className="ml-auto text-white/60">{readiness.high}</span></span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /> Medium <span className="ml-auto text-white/60">{readiness.medium}</span></span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-white/40" /> Low <span className="ml-auto text-white/60">{readiness.low}</span></span>
+            <div className="flex-1 flex flex-col gap-0.5 text-[10.5px]">
+              <div className="text-[9.5px] font-semibold uppercase tracking-widest text-white/50">Evidence Readiness</div>
+              <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> High <span className="ml-auto text-white/60">{readiness.high}</span></span>
+              <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Med <span className="ml-auto text-white/60">{readiness.medium}</span></span>
+              <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-white/40" /> Low <span className="ml-auto text-white/60">{readiness.low}</span></span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="p-4 border-t border-white/10">
-        <div className="flex items-center justify-between px-1 py-1">
+      <div className="px-4 py-2.5 border-t border-white/10">
+        <div className="flex items-center justify-between px-1">
           <div className="flex min-w-0 items-center gap-2.5" title={userDisplay?.label}>
             <Avatar name={userDisplay?.initials ?? '?'} color="#4f46e5" size={30} />
             <div className="truncate text-[13px] font-medium text-white/90">
