@@ -18,6 +18,7 @@ import {
 import { TIER_META, TIER_ORDER, tierIndex, type Tier } from '@/lib/admissions/definitions';
 import type { Fact } from '@/lib/admissions/definitions';
 import { BUCKET_BADGE } from '@/components/assessment/ui';
+import { IntelligenceCenter } from '@/components/intelligence/IntelligenceCenter';
 
 /* ── Shared chips ─────────────────────────────────────────── */
 
@@ -115,7 +116,7 @@ export default function SchoolDetailPage() {
 
   if (!evaluation) {
     return (
-      <div className="animate-fade-in">
+      <div className="animate-fade-in max-w-[1080px] mx-auto">
         <BackLink studentId={studentId} />
         <div className="bg-white rounded-card shadow-card p-16 text-center">
           <h3 className="text-[16px] font-semibold text-[var(--ink)] mb-2">{school.name}</h3>
@@ -149,7 +150,7 @@ export default function SchoolDetailPage() {
   }));
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in max-w-[1080px] mx-auto">
       <BackLink studentId={studentId} />
 
       {/* Header */}
@@ -185,6 +186,20 @@ export default function SchoolDetailPage() {
         <Stat icon={<Package size={13} />} label="Model Version"><span className="text-[13px] font-semibold text-[var(--ink)]">v{engineVersion}</span></Stat>
       </div>
 
+      {/* Fit & application intelligence (folded in from the Research page) */}
+      <div className="mb-2 flex items-center gap-2">
+        <Eye size={13} className="text-[var(--accent)]" />
+        <h2 className="text-[13px] font-semibold uppercase tracking-widest text-[var(--muted)]">Fit &amp; Application Intelligence</h2>
+      </div>
+      <div className="mb-6">
+        <IntelligenceCenter student={student} school={school} v2={v2} studentId={studentId} />
+      </div>
+
+      {/* How the tier was computed — the deterministic engine audit */}
+      <div className="mb-2 flex items-center gap-2">
+        <Scale size={13} className="text-[var(--accent)]" />
+        <h2 className="text-[13px] font-semibold uppercase tracking-widest text-[var(--muted)]">Engine Audit — how the tier was computed</h2>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* ① Adjustment trace */}
         <section className="lg:col-span-3 bg-white rounded-card shadow-card">
