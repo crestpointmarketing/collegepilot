@@ -3,6 +3,7 @@ import { TIER_META } from './admissions/definitions';
 import type { ProfileAssessment } from './admissions/assessment';
 import type { EngineResult, SchoolEvaluation } from './admissions/engine';
 import { getSchoolFacts } from './admissions/schoolFacts';
+import { isPositioningConfirmed, isDirectionConfirmed, HYPOTHESIS_KIND_META } from './admissions/journey';
 
 export interface SchoolResearchContext {
   school_name: string;
@@ -169,6 +170,7 @@ Hard rules:
 - Improvement levers describe qualitative effects on assessment dimensions with deadlines — never percentage-point claims.
 - The plan works BACKWARD from deadlines (early rounds Nov 1, RD Jan 1); every month's tasks should name which application component they feed.
 - Tone: professional, direct, specific. No "well-rounded student", no guaranteed-admission language, no fluff.
+- STUDENT-CONFIRMED FOCUS (when provided) is authoritative for the STORY and MAJOR: build positioning, narrative_direction, why-major reasoning, activity/lever suggestions, and school notes around the confirmed identity and academic direction. Never propose a different core identity or major, and never contradict it. It changes framing ONLY — it must never move a tier, band, probability, or the portfolio math. When focus is NOT confirmed, any positioning/major you use is inferred and must be labeled as a working hypothesis, and must not be presented as the student's settled choice.
 - All JSON string values must be single-line (no literal newlines).`;
 
 function describeEvaluation(ev: SchoolEvaluation): string {
@@ -179,6 +181,55 @@ function describeEvaluation(ev: SchoolEvaluation): string {
     .map(t => `${t.stepDelta > 0 ? '+' : t.stepDelta < 0 ? '−' : '·'} ${t.label}`)
     .join('; ');
   return `- ${ev.short} [${ev.uiBucket.toUpperCase()}] → ${ev.tierLabel} (${ev.band.min}–${ev.band.max}%) | ED value: ${edGrade} | factors: ${traceSummary}${ev.flags.length ? ` | flags: ${ev.flags.join(', ')}` : ''}`;
+}
+
+/**
+ * Serialize the student's CONFIRMED identity + academic direction (Blueprint
+ * Journey stages 1–2) for the narrative call. Confirmed choices are
+ * authoritative for the STORY and MAJOR framing (positioning, narrative,
+ * why-major, activities, school reasoning) — never for admit tiers/bands,
+ * which the engine owns. When nothing is confirmed, the model may infer but
+ * must label the inference as working/suggested.
+ */
+export function serializeConfirmedFocus(student: Student): string {
+  const pos = student.positioning;
+  const dir = student.direction;
+  const idOk = isPositioningConfirmed(pos);
+  const dirOk = isDirectionConfirmed(dir);
+
+  if (!idOk && !dirOk) {
+    return `\nSTUDENT-CONFIRMED FOCUS: none yet. The student has NOT confirmed an identity or academic direction. You MAY infer a working positioning and likely major from the evidence, but every such inference MUST be framed as inferred/working (e.g. "working hypothesis", "suggested direction") — never presented as the student's settled choice.\n`;
+  }
+
+  const lines: string[] = [
+    '\nSTUDENT-CONFIRMED FOCUS (authoritative — the student explicitly chose this; do NOT override, contradict, or substitute a different core identity or major):',
+  ];
+
+  if (idOk && pos) {
+    const label = (id: string) => {
+      const h = pos.hypotheses.find(x => x.id === id);
+      return h ? `${h.label} (${HYPOTHESIS_KIND_META[h.kind]?.label ?? h.kind})` : null;
+    };
+    const primary = pos.confirmed.filter(c => c.role === 'primary').map(c => label(c.hypothesisId)).filter(Boolean);
+    const secondary = pos.confirmed.filter(c => c.role === 'secondary').map(c => label(c.hypothesisId)).filter(Boolean);
+    if (primary.length) lines.push(`- Confirmed core identity (PRIMARY): ${primary.join('; ')}`);
+    if (secondary.length) lines.push(`- Secondary identity: ${secondary.join('; ')}`);
+  } else {
+    lines.push('- Identity: not yet confirmed — you may infer, but label it a working hypothesis.');
+  }
+
+  if (dirOk && dir) {
+    const title = (id: string) => dir.directions.find(d => d.id === id)?.title ?? null;
+    const primary = dir.selected.filter(s => s.role === 'primary').map(s => title(s.directionId)).filter(Boolean);
+    const others = dir.selected.filter(s => s.role !== 'primary').map(s => title(s.directionId)).filter(Boolean);
+    if (primary.length) lines.push(`- Confirmed academic direction (PRIMARY major / program type): ${primary.join('; ')}. Use this as the primary "why this major" thread, and match programs/majors at each school to it.`);
+    if (others.length) lines.push(`- Secondary / explore directions: ${others.join('; ')}`);
+  } else {
+    lines.push('- Academic direction: not yet confirmed — you may infer a likely major, but label it a suggested direction.');
+  }
+
+  lines.push('Reflect this confirmed focus in positioning, narrative_direction, the why-major reasoning, activity/lever suggestions, and school_notes. It shapes the STORY and MAJOR framing ONLY — it must NOT change any admit tier, band, probability, or the portfolio math (those are fixed by the engine).');
+  return lines.join('\n') + '\n';
 }
 
 export function buildNarrativePrompt(
@@ -198,7 +249,7 @@ export function buildNarrativePrompt(
   return `Write the strategy report for this family. Submit via the tool. School notes are required for EVERY school listed below, using the exact short names given.
 
 ${serializeStudentProfile(student)}
-
+${serializeConfirmedFocus(student)}
 ---
 
 PROFILE ASSESSMENT (your colleague's structured first-read — cite it):

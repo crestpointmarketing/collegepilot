@@ -8,6 +8,7 @@ import { useApp } from '@/context/AppContext';
 import { SCHOOLS } from '@/lib/schools';
 import { computeSchoolMatch, computeApplicationStrategy, type FitLevel } from '@/lib/admissions/schoolMatch';
 import type { SchoolEvaluation, PortfolioSummary } from '@/lib/admissions/engine';
+import { primaryDirectionTitle } from '@/lib/admissions/journey';
 import {
   PageHeader, Card, Chip, AlertCard, EmptyState, StatTile, PrimaryButton,
   JourneyStepper, type Tone,
@@ -49,6 +50,7 @@ interface PathwayCardData {
   schoolId: string;
   university: string;
   program: string;
+  programInferred: boolean;
   round: string;
   tierLabel: string;
   band: { min: number; max: number };
@@ -63,6 +65,7 @@ export default function PortfolioPage() {
   const student = students.find(s => s.id === studentId);
   const v2 = strategies[studentId]?.v2 ?? null;
 
+  const dirTitle = primaryDirectionTitle(student?.direction);
   const { columns, portfolio, suggestions } = useMemo(() => {
     if (!student || !v2?.assessment) return { columns: null, portfolio: null, suggestions: [] as PathwayCardData[] };
     const toCard = (ev: SchoolEvaluation): PathwayCardData | null => {
@@ -76,7 +79,9 @@ export default function PortfolioPage() {
       return {
         schoolId: ev.schoolId,
         university: school.short,
-        program: strat.suggestedMajor,
+        // Prefer the confirmed academic direction; else the system suggestion, flagged inferred.
+        program: dirTitle ?? strat.suggestedMajor,
+        programInferred: !dirTitle,
         round: strat.recommendedRound,
         tierLabel: ev.tierLabel,
         band: { min: ev.band.min, max: ev.band.max },
@@ -91,7 +96,7 @@ export default function PortfolioPage() {
     });
     const sugg = (v2.suggestions ?? []).map(toCard).filter((c): c is PathwayCardData => !!c);
     return { columns: grouped, portfolio: v2.portfolio, suggestions: sugg };
-  }, [student, v2]);
+  }, [student, v2, dirTitle]);
 
   if (!student) return <div className="text-[var(--muted)]">Student not found.</div>;
 
@@ -197,7 +202,10 @@ export default function PortfolioPage() {
                       <h3 className="text-[14px] font-bold text-[var(--ink)] leading-tight">{c.university}</h3>
                       <Chip tone={FIT_TONE[c.overall]}>{c.overall}</Chip>
                     </div>
-                    <p className="text-[12px] text-[var(--muted)] mb-2.5 leading-snug">{c.program}</p>
+                    <p className="text-[12px] text-[var(--muted)] mb-2.5 leading-snug flex items-center gap-1.5 flex-wrap">
+                      {c.program}
+                      {c.programInferred && <span className="text-[9.5px] font-semibold uppercase tracking-wide text-[var(--muted-2)] border border-[var(--line-strong)] rounded px-1 py-px">inferred</span>}
+                    </p>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Chip tone="neutral">{c.round}</Chip>
                       <span className="text-[11px] font-semibold text-[var(--accent)] bg-[var(--accent-50)] px-2 py-0.5 rounded-full">{c.leverage}</span>

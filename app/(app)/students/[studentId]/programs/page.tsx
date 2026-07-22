@@ -8,7 +8,7 @@ import { useApp } from '@/context/AppContext';
 import { SCHOOLS } from '@/lib/schools';
 import { computeSchoolMatch, computeApplicationStrategy, type FitLevel } from '@/lib/admissions/schoolMatch';
 import { PageHeader, Chip, AlertCard, EmptyState, PrimaryButton, type Tone } from '@/components/ui';
-import { isDirectionConfirmed } from '@/lib/admissions/journey';
+import { isDirectionConfirmed, primaryDirectionTitle } from '@/lib/admissions/journey';
 
 const FIT_TONE: Record<FitLevel, Tone> = { Excellent: 'positive', Strong: 'accent', Moderate: 'warning', Limited: 'critical', Unknown: 'neutral' };
 const BUCKET_TONE: Record<string, Tone> = { reach: 'warning', match: 'accent', safety: 'positive' };
@@ -21,6 +21,7 @@ export default function ProgramsPage() {
   const v2 = strategies[studentId]?.v2 ?? null;
   const [q, setQ] = useState('');
 
+  const dirTitle = primaryDirectionTitle(student?.direction);
   const pathways = useMemo(() => {
     if (!student || !v2?.assessment) return [];
     return (v2.evaluations ?? []).map(ev => {
@@ -34,7 +35,10 @@ export default function ProgramsPage() {
       return {
         schoolId: ev.schoolId,
         university: school.short,
-        program: strat.suggestedMajor,
+        // Prefer the student's confirmed academic direction; otherwise show the
+        // system suggestion, flagged as inferred.
+        program: dirTitle ?? strat.suggestedMajor,
+        programInferred: !dirTitle,
         round: strat.recommendedRound,
         likelihood: ev.tierLabel,
         bucket: ev.uiBucket,
@@ -43,7 +47,7 @@ export default function ProgramsPage() {
         axes: match.axes.slice(0, 5),
       };
     }).filter((p): p is NonNullable<typeof p> => !!p);
-  }, [student, v2]);
+  }, [student, v2, dirTitle]);
 
   if (!student) return <div className="text-[var(--muted)]">Student not found.</div>;
 
@@ -109,7 +113,10 @@ export default function ProgramsPage() {
                   <span className="text-[11px] text-[var(--accent)] font-semibold bg-[var(--accent-50)] px-2 py-0.5 rounded-full">{p.leverage}</span>
                 </div>
                 <h3 className="text-[15px] font-bold text-[var(--ink)]">{p.university}</h3>
-                <p className="text-[12.5px] text-[var(--muted)]">{p.program}</p>
+                <p className="text-[12.5px] text-[var(--muted)] flex items-center gap-1.5 flex-wrap">
+                  {p.program}
+                  {p.programInferred && <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-2)] border border-[var(--line-strong)] rounded px-1 py-px">inferred</span>}
+                </p>
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-[10px] text-[var(--muted)] mb-1">Overall Fit</p>

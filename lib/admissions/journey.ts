@@ -269,5 +269,17 @@ export function isDirectionConfirmed(d: DirectionState | undefined): boolean {
   return !!d && d.selected.filter(s => s.role === 'primary').length === 1;
 }
 
+/**
+ * The title of the confirmed PRIMARY academic direction, or null when the
+ * student hasn't confirmed one. Used so Programs/Portfolio pathways show the
+ * student's chosen major rather than only the system-inferred suggestion.
+ */
+export function primaryDirectionTitle(d: DirectionState | undefined): string | null {
+  if (!isDirectionConfirmed(d) || !d) return null;
+  const sel = d.selected.find(s => s.role === 'primary');
+  if (!sel) return null;
+  return d.directions.find(x => x.id === sel.directionId)?.title ?? null;
+}
+
 /** Re-export the borrowed tier types so downstream has one import site. */
 export type { ConfidenceLevel, Tier, FitLevel };
