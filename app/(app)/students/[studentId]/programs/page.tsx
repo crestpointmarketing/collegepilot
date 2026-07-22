@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Search, GraduationCap, ArrowRight } from 'lucide-react';
+import { Search, GraduationCap, ArrowRight, FlaskConical } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { SCHOOLS } from '@/lib/schools';
 import { computeSchoolMatch, computeApplicationStrategy, type FitLevel } from '@/lib/admissions/schoolMatch';
@@ -52,7 +52,17 @@ export default function ProgramsPage() {
     ? pathways.filter(p => `${p.university} ${p.program}`.toLowerCase().includes(q.trim().toLowerCase()))
     : pathways;
 
-  const header = <PageHeader title="Programs & Schools" sub="Application Pathways — University → College → Program → Round" />;
+  const header = (
+    <PageHeader
+      title="Programs & Schools"
+      sub="Application Pathways — University → College → Program → Round"
+      actions={
+        <Link href={`/students/${studentId}/research`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[var(--line-strong)] text-[13px] font-semibold text-[var(--ink)] hover:bg-[var(--bg-soft)] transition-colors">
+          <FlaskConical size={14} /> Admission intelligence
+        </Link>
+      }
+    />
+  );
 
   if (!v2?.assessment) {
     return (

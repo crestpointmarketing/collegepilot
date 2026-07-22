@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowRight, Download, Star, Compass, Sparkles, ScrollText } from 'lucide-react';
+import { ArrowRight, Download, Star, Compass, Sparkles, ScrollText, ClipboardCheck } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { DIMENSION_LABELS, derivePortfolioAlerts } from '@/components/assessment/ui';
 import {
@@ -81,7 +81,8 @@ export default function OverviewPage() {
         actions={
           <>
             <Chip tone="info">{stageLabel} Phase</Chip>
-            <Link href={`/students/${studentId}/downloads`}><GhostButton><Download size={13} /> Export</GhostButton></Link>
+            <Link href={`/students/${studentId}/assessment`}><GhostButton><ClipboardCheck size={13} /> Assessment</GhostButton></Link>
+            <Link href={`/students/${studentId}/documents`}><GhostButton><Download size={13} /> Export</GhostButton></Link>
           </>
         }
       />

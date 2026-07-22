@@ -95,7 +95,19 @@ export default function PortfolioPage() {
 
   if (!student) return <div className="text-[var(--muted)]">Student not found.</div>;
 
-  const header = <PageHeader title="Portfolio" sub="Balance the pathway list — coverage, correlation, and shutout risk across Reach / Match / Safety." />;
+  const header = (
+    <PageHeader
+      title="Portfolio"
+      sub="Balance the pathway list — coverage, correlation, and shutout risk across Reach / Match / Safety."
+      actions={
+        v2?.assessment ? (
+          <Link href={`/students/${studentId}/strategy`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[var(--line-strong)] text-[13px] font-semibold text-[var(--ink)] hover:bg-[var(--bg-soft)] transition-colors">
+            <Target size={14} /> Full strategy analysis
+          </Link>
+        ) : undefined
+      }
+    />
+  );
 
   if (!v2?.assessment || !columns || !portfolio) {
     return (
