@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, LayoutGrid, FileText, Compass, Search, Layers, ScrollText, CalendarDays, FolderOpen } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid, FileText, Compass, Search, Layers, ScrollText, CalendarDays, FolderOpen, PenLine } from 'lucide-react';
 
 const GLOBAL_NAV = [
   { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -27,6 +27,7 @@ const JOURNEY_NAV = [
 const UTILITY_NAV = [
   { id: 'timeline',  label: 'Timeline',  icon: CalendarDays },
   { id: 'documents', label: 'Documents', icon: FolderOpen },
+  { id: 'essays',    label: 'Essays',    icon: PenLine },
 ];
 
 const ALL_STUDENT_NAV = [...JOURNEY_NAV, ...UTILITY_NAV];

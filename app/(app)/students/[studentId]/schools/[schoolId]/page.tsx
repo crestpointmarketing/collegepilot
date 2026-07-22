@@ -161,9 +161,14 @@ export default function SchoolDetailPage() {
           </h1>
           <p className="text-[var(--muted)] mt-1">{school.city}, {school.state} · #{school.ranking} · {school.type}</p>
         </div>
-        <Link href={`/students/${studentId}/strategy`} className="flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium shrink-0" style={{ background: 'var(--accent)' }}>
-          View Strategy <ArrowRight size={14} />
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link href={`/students/${studentId}/essays`} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[var(--line-strong)] bg-white text-[13.5px] font-semibold text-[var(--ink)] hover:bg-[var(--bg-soft)] transition-colors">
+            Essays
+          </Link>
+          <Link href={`/students/${studentId}/strategy`} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-[13.5px] font-medium" style={{ background: 'var(--accent)' }}>
+            View Strategy <ArrowRight size={14} />
+          </Link>
+        </div>
       </div>
 
       {recomputed && (
