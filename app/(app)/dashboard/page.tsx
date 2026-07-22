@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, FileText, Search, Trash2 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { PageHeader, PrimaryButton, StatTile } from '@/components/ui';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Avatar } from '@/components/shared/Avatar';
 import type { Student } from '@/types';
@@ -40,32 +41,23 @@ export default function DashboardPage() {
 
   return (
     <div className="animate-fade-in max-w-[1080px] mx-auto">
-      {/* Page header */}
-      <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
-        <div>
-          <h1 className="text-[26px] font-bold tracking-tight text-[var(--ink)]">Students</h1>
-          <p className="text-[var(--muted)] mt-1">Manage applicant strategies and Common App–ready outputs.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled
-            title="Templates are coming soon"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lgborder border-[var(--line-strong)] text-[var(--muted)] text-[13.5px] font-medium bg-white shadow-card opacity-60 cursor-not-allowed"
-          >
-            <FileText size={14} />
-            Templates
-          </button>
-          <Link
-            href="/students/new/profile"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lgtext-white text-[13.5px] font-medium transition-all"
-            style={{ background: 'var(--accent)' }}
-          >
-            <Plus size={14} />
-            Create New Student
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title="Students"
+        sub="Manage applicant strategies and Common App–ready outputs."
+        actions={
+          <>
+            <button
+              type="button"
+              disabled
+              title="Templates are coming soon"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[var(--line-strong)] text-[var(--muted)] text-[14px] font-semibold bg-white opacity-60 cursor-not-allowed"
+            >
+              <FileText size={14} /> Templates
+            </button>
+            <PrimaryButton href="/students/new/profile"><Plus size={14} /> Create New Student</PrimaryButton>
+          </>
+        }
+      />
 
       {/* Stats row */}
       {students.length > 0 && (
@@ -76,11 +68,7 @@ export default function DashboardPage() {
             { label: 'Document-ready',    value: stats.ready, delta: '+1 vs last week' },
             { label: 'Avg. GPA (weighted)', value: stats.avgGpa, delta: 'Cohort weighted average' },
           ].map(stat => (
-            <div key={stat.label} className="bg-white rounded-card shadow-card p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted)] mb-1">{stat.label}</div>
-              <div className="text-[28px] font-semibold tabular-nums text-[var(--ink)]">{stat.value}</div>
-              <div className="text-[12px] text-[var(--muted)] mt-0.5">{stat.delta}</div>
-            </div>
+            <StatTile key={stat.label} label={stat.label} value={String(stat.value)} sub={stat.delta} />
           ))}
         </div>
       )}
@@ -103,13 +91,13 @@ export default function DashboardPage() {
               type="button"
               onClick={handleSeedSamples}
               disabled={seeding || saveState === 'saving'}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lgborder border-[var(--line-strong)] bg-white text-[var(--ink)] text-[13.5px] font-medium hover:bg-[var(--bg-soft)] disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[var(--line-strong)] bg-white text-[var(--ink)] text-[13.5px] font-medium hover:bg-[var(--bg-soft)] disabled:opacity-60"
             >
               <FileText size={14} /> {seeding || saveState === 'saving' ? 'Loading samples...' : 'Load Sample Students'}
             </button>
             <Link
               href="/students/new/profile"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lgtext-white text-[13.5px] font-medium"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-[13.5px] font-medium"
               style={{ background: 'var(--accent)' }}
             >
               <Plus size={14} /> Create Your First Student
@@ -117,13 +105,13 @@ export default function DashboardPage() {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-card shadow-card overflow-hidden">
+        <div className="bg-white rounded-card shadow-card border border-[var(--line)] overflow-hidden">
           {/* Toolbar */}
           <div className="px-5 py-3.5 border-b border-[var(--line)] flex items-center gap-3">
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-2)]" />
               <input
-                className="pl-9 pr-3 py-1.5 rounded-lgborder border-[var(--line-strong)] text-[13.5px] bg-white w-64 focus:outline-none focus:border-[var(--accent)] focus:shadow-focus transition-all"
+                className="pl-9 pr-3 py-1.5 rounded-lg border border-[var(--line-strong)] text-[13.5px] bg-white w-64 focus:outline-none focus:border-[var(--accent)] focus:shadow-focus transition-all"
                 placeholder="Search by name, school, major…"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
@@ -134,7 +122,7 @@ export default function DashboardPage() {
                 <button
                   key={s}
                   onClick={() => setStatusFilter(s)}
-                  className={`px-3 py-1 rounded-lgtext-[12.5px] font-medium transition-all ${
+                  className={`px-3 py-1 rounded-lg text-[12.5px] font-medium transition-all ${
                     statusFilter === s
                       ? 'bg-[var(--accent-50)] text-[var(--accent)]'
                       : 'text-[var(--muted)] hover:bg-[var(--bg-soft)]'
@@ -227,7 +215,7 @@ function StudentRow({ student }: { student: Student }) {
         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
           <button
             onClick={handleDelete}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lgtext-[12px] font-medium transition-all ${
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[12px] font-medium transition-all ${
               confirming
                 ? 'bg-red-500 text-white'
                 : 'border border-[var(--line-strong)] text-[var(--muted)] bg-white hover:border-red-300 hover:text-red-500'
@@ -238,7 +226,7 @@ function StudentRow({ student }: { student: Student }) {
           </button>
           <Link
             href={href}
-            className="px-3 py-1 rounded-lgborder border-[var(--line-strong)] text-[12.5px] font-medium text-[var(--ink)] bg-white hover:bg-[var(--bg-soft)] transition-all shadow-card"
+            className="px-3 py-1 rounded-lg border border-[var(--line-strong)] text-[12.5px] font-medium text-[var(--ink)] bg-white hover:bg-[var(--bg-soft)] transition-all shadow-card"
           >
             Open
           </Link>
