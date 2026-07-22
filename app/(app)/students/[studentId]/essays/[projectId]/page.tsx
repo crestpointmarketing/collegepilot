@@ -31,6 +31,7 @@ export default function EssayWorkspacePage() {
   const [tab, setTab] = useState<Tab>('understand');
   const [err, setErr] = useState<string | null>(null);
   const [mining, setMining] = useState(false);
+  const [mineNote, setMineNote] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -65,13 +66,25 @@ export default function EssayWorkspacePage() {
 
   const mine = async () => {
     if (mining) return;
-    setMining(true); setErr(null);
+    setMining(true); setErr(null); setMineNote('Mining angles… this usually takes ~45 seconds — please wait.');
+    const t0 = Date.now();
+    console.log('[essays] mine: start', { projectId });
+    const tick = setInterval(() => setMineNote(`Mining angles… ${Math.round((Date.now() - t0) / 1000)}s (usually ~45s).`), 1000);
     try {
-      await fetchStreamedJson('/api/essay-angles', { projectId });
+      const res = await fetchStreamedJson('/api/essay-angles', { projectId });
+      console.log('[essays] mine: ok', res);
       await load();
       setTab('angles');
-    } catch (e) { setErr(e instanceof Error ? e.message : 'Angle generation failed.'); }
-    finally { setMining(false); }
+      setMineNote(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('[essays] mine: failed', e);
+      setErr(`Angle generation failed after ${Math.round((Date.now() - t0) / 1000)}s — ${msg}`);
+      setMineNote(null);
+    } finally {
+      clearInterval(tick);
+      setMining(false);
+    }
   };
 
   const setDisposition = async (angleId: string, disposition: AngleDisposition) => {
@@ -139,6 +152,7 @@ export default function EssayWorkspacePage() {
               <PrimaryButton onClick={mine} className={mining ? 'opacity-60 pointer-events-none' : ''}>
                 {mining ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} {angles.length ? 'Mine more angles' : 'Mine angles'}
               </PrimaryButton>
+              {mineNote && <p className="text-[12px] text-[var(--accent)] mt-2">{mineNote}</p>}
             </div>
           </Card>
         </div>
@@ -152,6 +166,7 @@ export default function EssayWorkspacePage() {
               <PrimaryButton onClick={mine} className={mining ? 'opacity-60 pointer-events-none' : ''}>
                 {mining ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Mine angles
               </PrimaryButton>
+              {mineNote && <p className="text-[12px] text-[var(--accent)] mt-3">{mineNote}</p>}
             </Card>
           )}
           {angles.map(a => {
