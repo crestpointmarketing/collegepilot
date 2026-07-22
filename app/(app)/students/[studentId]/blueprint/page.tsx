@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import { ScrollText, Sparkles, RefreshCw, Loader2, AlertCircle, CheckCircle2, Compass, Pencil, Printer } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { BlueprintDocument } from '@/components/blueprint/BlueprintDocument';
@@ -109,6 +109,15 @@ export default function BlueprintPage() {
   const [error, setError] = useState<string | null>(null);
   const [revisiting, setRevisiting] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Auto-open the print dialog when arrived at via ?print=1 (from Documents).
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('print') === '1' && blueprint && confirmed) {
+      const t = setTimeout(() => window.print(), 700);
+      return () => clearTimeout(t);
+    }
+  }, [searchParams, blueprint, confirmed]);
 
   async function run(kind: 'positioning' | 'blueprint', steps: string[], fn: () => Promise<void>) {
     if (!student || busy) return;

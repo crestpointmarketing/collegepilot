@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
-import { Printer, Download, FileSpreadsheet, File } from 'lucide-react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { Printer, Download, FileSpreadsheet, File, ScrollText, ArrowRight } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { PageHeader, AlertCard, GhostButton, Chip, PrimaryButton } from '@/components/ui';
 import { CHAR_LIMITS } from '@/lib/characterLimits';
 import type { Activity, Award, Strategy, Student } from '@/types';
 
-/* ── Export helpers (merged from the former Downloads page) ── */
+/* ── Export helpers ── */
 
 function downloadText(filename: string, content: string) {
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -31,13 +31,23 @@ function downloadCSV(filename: string, rows: string[][]) {
   URL.revokeObjectURL(url);
 }
 
+/** First sentence of a prose field — keeps the preview to core points. */
+function firstSentence(text: string | undefined): string {
+  if (!text) return '';
+  const t = text.replace(/\s+/g, ' ').trim();
+  const m = t.match(/^.*?[.!?](\s|$)/);
+  return (m ? m[0] : t).trim();
+}
+
 export default function DocumentsPage() {
   const params = useParams();
-  const { students, strategies } = useApp();
+  const router = useRouter();
+  const { students, strategies, blueprints } = useApp();
   const studentId = params.studentId as string;
 
   const student = students.find(s => s.id === studentId);
   const strategy = strategies[studentId] ?? null;
+  const blueprint = blueprints[studentId] ?? null;
 
   const [view, setView] = useState<'strategy' | 'commonapp'>('strategy');
   const searchParams = useSearchParams();
@@ -50,12 +60,12 @@ export default function DocumentsPage() {
 
   if (!student) return <div className="text-[var(--muted)]">Student not found.</div>;
 
+  const firstName = student.name.split(' ')[0];
   const acts = (student.activities ?? []).slice(0, 10);
   const awards = (student.awards ?? []).slice(0, 5);
   const hasOverflow = (student.activities?.length ?? 0) > 10 || (student.awards?.length ?? 0) > 5;
   const hasStrategy = !!strategy;
 
-  /* Generated downloads */
   const handleCSV = () => {
     if (!strategy) return;
     const rows: string[][] = [
@@ -84,25 +94,49 @@ export default function DocumentsPage() {
   };
 
   const schoolCount = (strategy?.schools.reach.length ?? 0) + (strategy?.schools.match.length ?? 0) + (strategy?.schools.safety.length ?? 0);
-  const downloads = [
-    { icon: Printer, title: 'Strategy Report', desc: 'Full positioning, school list, and execution plan. Opens the print dialog (Save as PDF).', format: 'PDF', size: 'via browser', enabled: hasStrategy, onDownload: () => window.print() },
-    { icon: FileSpreadsheet, title: 'School List', desc: 'Reach / Match / Safety schools with admit probabilities for tracking.', format: 'CSV', size: `${schoolCount} schools`, enabled: hasStrategy, onDownload: handleCSV },
-    { icon: File, title: 'Common App Entries', desc: 'Activities and honors formatted for Common App word limits.', format: 'TXT', size: `${acts.length} activities`, enabled: (student.activities?.length ?? 0) > 0, onDownload: handleTxt },
+  const secondaryDownloads = [
+    { icon: Printer, title: 'Strategy Summary', desc: 'This one-page summary. Opens the print dialog (Save as PDF).', format: 'PDF', size: 'this page', enabled: hasStrategy, onDownload: () => window.print() },
+    { icon: FileSpreadsheet, title: 'School List', desc: 'Reach / Match / Safety with admit probabilities.', format: 'CSV', size: `${schoolCount} schools`, enabled: hasStrategy, onDownload: handleCSV },
+    { icon: File, title: 'Common App Entries', desc: 'Activities and honors within Common App limits.', format: 'TXT', size: `${acts.length} activities`, enabled: (student.activities?.length ?? 0) > 0, onDownload: handleTxt },
   ];
 
   return (
     <div className="animate-fade-in max-w-[1080px] mx-auto">
       <PageHeader
         title="Documents & Downloads"
-        sub={`Preview Common App–ready content and export strategy assets for ${student.name}.`}
+        sub={`A one-page summary for ${student.name} — full detail lives in the Blueprint Journey™.`}
         actions={<GhostButton onClick={() => window.print()}><Printer size={14} /> Print / Save PDF</GhostButton>}
       />
+
+      {/* Hero: the Blueprint is the complete document */}
+      <div className="mb-6 rounded-card border border-[var(--accent-100)] bg-[var(--accent-50)] p-6 flex items-center justify-between gap-4 flex-wrap no-print">
+        <div className="flex items-start gap-4 min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-card">
+            <ScrollText size={22} style={{ color: 'var(--accent)' }} />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[16px] font-bold text-[var(--ink)]">Blueprint Journey™{blueprint ? ` · ${blueprint.draftLabel}` : ''}</div>
+            <p className="text-[13px] text-[var(--muted)] mt-0.5 leading-relaxed max-w-xl">
+              The complete six-volume strategy book — identity, evidence, positioning, program fit, and narrative for {firstName} in one document. This is the deliverable to download and share.
+            </p>
+          </div>
+        </div>
+        {blueprint ? (
+          <PrimaryButton onClick={() => router.push(`/students/${studentId}/blueprint?print=1`)}>
+            <Download size={15} /> Download Blueprint PDF
+          </PrimaryButton>
+        ) : (
+          <PrimaryButton onClick={() => router.push(`/students/${studentId}/blueprint`)}>
+            Build the Blueprint <ArrowRight size={15} />
+          </PrimaryButton>
+        )}
+      </div>
 
       {/* View toggle */}
       <div className="flex gap-2 mb-5 no-print">
         {[
-          { key: 'strategy' as const, label: 'Full Strategy Report' },
-          { key: 'commonapp' as const, label: 'Common App Version' },
+          { key: 'strategy' as const, label: 'Strategy Summary' },
+          { key: 'commonapp' as const, label: 'Common App Entries' },
         ].map(opt => (
           <button
             key={opt.key}
@@ -118,36 +152,35 @@ export default function DocumentsPage() {
         ))}
       </div>
 
-      {/* Overflow warning */}
-      {hasOverflow && (
+      {view === 'commonapp' && hasOverflow && (
         <div className="mb-5">
           <AlertCard tone="warning" title="Common App limits applied"
             body={`Showing top 10 activities (${student.activities?.length ?? 0} entered) and top 5 honors (${student.awards?.length ?? 0} entered).`} />
         </div>
       )}
 
-      {/* Document preview */}
+      {/* Preview — concise */}
       <div className="bg-white rounded-card shadow-card border border-[var(--line)] p-8 animate-slide-in" key={view}>
         {view === 'strategy' ? (
-          <StrategyDoc student={student} strategy={strategy} />
+          <StrategySummary student={student} strategy={strategy} firstName={firstName} />
         ) : (
           <CommonAppDoc student={student} acts={acts} awards={awards} />
         )}
       </div>
 
-      {/* ── Generated Downloads (merged from the former Downloads page) ── */}
+      {/* Secondary exports */}
       <div className="mt-8 no-print">
-        <h2 className="text-[16px] font-bold text-[var(--ink)] mb-1">Generated Downloads</h2>
-        <p className="text-[13px] text-[var(--muted)] mb-4">Export the strategy and Common App materials above.</p>
+        <h2 className="text-[15px] font-bold text-[var(--ink)] mb-1">Also available</h2>
+        <p className="text-[13px] text-[var(--muted)] mb-4">Lightweight exports for tracking and the Common App.</p>
 
         {!hasStrategy && (
           <div className="mb-4">
-            <AlertCard tone="warning" title="No strategy yet" body="Generate a strategy first to enable the PDF and CSV exports." />
+            <AlertCard tone="warning" title="No strategy yet" body="Generate a strategy first to enable these exports." />
           </div>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {downloads.map(d => {
+          {secondaryDownloads.map(d => {
             const Icon = d.icon;
             return (
               <div key={d.title} className={`bg-white rounded-xl border border-[var(--line)] shadow-card p-5 flex flex-col gap-4 ${!d.enabled ? 'opacity-50' : ''}`}>
@@ -175,26 +208,72 @@ export default function DocumentsPage() {
             );
           })}
         </div>
-
-        <div className="mt-4 bg-white rounded-xl border border-[var(--line)] shadow-card p-5 flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <div className="text-[14px] font-semibold text-[var(--ink)]">Download everything</div>
-            <div className="text-[13px] text-[var(--muted)] mt-0.5">CSV school list + Common App entries.</div>
-          </div>
-          <PrimaryButton onClick={() => { handleCSV(); handleTxt(); }} className={!hasStrategy ? 'opacity-50 pointer-events-none' : ''}>
-            <Download size={14} /> Download All
-          </PrimaryButton>
-        </div>
       </div>
     </div>
   );
 }
 
-function DocH1({ children }: { children: React.ReactNode }) {
-  return <h1 className="text-[24px] font-bold text-[var(--ink)] mb-1">{children}</h1>;
+/* ── Concise strategy summary — core answers only ── */
+
+function SumRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="py-3 border-b border-[var(--line)] last:border-0">
+      <div className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--muted)] mb-1">{label}</div>
+      <div className="text-[14px] text-[var(--ink)] leading-relaxed">{children}</div>
+    </div>
+  );
 }
+
+function StrategySummary({ student, strategy, firstName }: { student: Student; strategy: Strategy | null; firstName: string }) {
+  if (!strategy) {
+    return (
+      <div className="text-center py-6">
+        <p className="text-[14px] text-[var(--muted)]">No strategy generated yet. Generate one to see the summary here.</p>
+      </div>
+    );
+  }
+  const v2 = strategy.v2 ?? null;
+  const outlook = v2
+    ? `${v2.portfolio.pAtLeastOne.lowerPct}–${v2.portfolio.pAtLeastOne.upperPct}% chance of at least one admit`
+    : (strategy.meta?.overall_success_probability ?? '—');
+  const comp = strategy.competitiveness;
+  const tierNames = (list: { name: string }[]) => list.map(s => s.name).join(', ');
+
+  return (
+    <div className="max-w-2xl">
+      <div className="text-[22px] font-bold text-[var(--ink)] tracking-tight">Strategy Summary</div>
+      <div className="text-[13px] text-[var(--muted)] mb-5">{student.name} · {student.school} · {student.major}</div>
+
+      <SumRow label="Applicant Type">{strategy.positioning.type}</SumRow>
+      <SumRow label={`Who is ${firstName}?`}>{firstSentence(strategy.positioning.identity)}</SumRow>
+      <SumRow label="Portfolio Outlook">{outlook}</SumRow>
+      {comp && (
+        <SumRow label="Competitiveness">
+          <span className="inline-flex flex-wrap gap-2">
+            <Chip tone="neutral">Top 10: {comp.top10.level}</Chip>
+            <Chip tone="neutral">Top 20: {comp.top20.level}</Chip>
+            <Chip tone="neutral">Top 50: {comp.top50.level}</Chip>
+          </span>
+        </SumRow>
+      )}
+      <SumRow label={`School List (${strategy.schools.reach.length + strategy.schools.match.length + strategy.schools.safety.length})`}>
+        <div className="flex flex-col gap-1 text-[13px]">
+          {strategy.schools.reach.length > 0 && <div><span className="font-semibold text-[#B91C1C]">Reach:</span> {tierNames(strategy.schools.reach)}</div>}
+          {strategy.schools.match.length > 0 && <div><span className="font-semibold text-[var(--accent)]">Match:</span> {tierNames(strategy.schools.match)}</div>}
+          {strategy.schools.safety.length > 0 && <div><span className="font-semibold text-[#15803D]">Safety:</span> {tierNames(strategy.schools.safety)}</div>}
+        </div>
+      </SumRow>
+      <SumRow label="Early Round (ED/EA)">{firstSentence(strategy.strategy.ed_ea)}</SumRow>
+
+      <div className="mt-5 rounded-lg bg-[var(--accent-50)] border border-[var(--accent-100)] px-4 py-3 text-[12.5px] text-[var(--ink-soft)] leading-relaxed">
+        This is the short version. The full reasoning, evidence labels, and the complete six volumes live in the <span className="font-semibold text-[var(--accent)]">Blueprint Journey™</span> — download it above.
+      </div>
+    </div>
+  );
+}
+
 function DocH2({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-[16px] font-bold text-[var(--ink)] mt-7 mb-3 pb-2 border-b border-[var(--line)]">{children}</h2>;
+  return <h2 className="text-[16px] font-bold text-[var(--ink)] mt-7 mb-3 pb-2 border-b border-[var(--line)] first:mt-0">{children}</h2>;
 }
 function DocSub({ children }: { children: React.ReactNode }) {
   return <div className="text-[13px] text-[var(--muted)] mb-6">{children}</div>;
@@ -203,48 +282,10 @@ function DocP({ children }: { children: React.ReactNode }) {
   return <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-3">{children}</p>;
 }
 
-function StrategyDoc({ student, strategy }: { student: Student; strategy: Strategy | null }) {
-  return (
-    <div className="max-w-2xl">
-      <DocH1>Admissions Strategy</DocH1>
-      <DocSub>Prepared for {student.name} · {student.school} · {student.major}</DocSub>
-
-      <DocH2>Student Overview</DocH2>
-      <DocP>
-        {student.name} is a Grade {student.grade} student at {student.school} ({student.city}),
-        pursuing {student.major}{student.secondary && ` with a secondary interest in ${student.secondary}`}.
-        Academic profile: GPA {student.gpa} ({student.gpaType}); SAT {student.sat || '—'};
-        {student.apCount} AP/IB courses. Citizenship: {student.citizenship || '—'};
-        school type: {student.schoolType}; first-generation: {student.firstGen}.
-      </DocP>
-
-      {strategy && (
-        <>
-          <DocH2>Strategy Summary</DocH2>
-          <DocP><strong>Applicant Type.</strong> {strategy.positioning.type}</DocP>
-          <DocP><strong>Core Identity.</strong> {strategy.positioning.identity}</DocP>
-          <DocP><strong>ED / EA Plan.</strong> {strategy.strategy.ed_ea}</DocP>
-          <DocP><strong>Narrative.</strong> {strategy.strategy.narrative}</DocP>
-
-          <DocH2>School List</DocH2>
-          <DocP><strong>Reach.</strong> {strategy.schools.reach.map(s => `${s.name} (${s.chance})`).join(', ')}</DocP>
-          <DocP><strong>Match.</strong> {strategy.schools.match.map(s => `${s.name} (${s.chance})`).join(', ')}</DocP>
-          <DocP><strong>Safety.</strong> {strategy.schools.safety.map(s => `${s.name} (${s.chance})`).join(', ')}</DocP>
-
-          <DocH2>Execution Plan</DocH2>
-          {strategy.plan.map((row, i) => (
-            <DocP key={i}><strong>{row.month}.</strong> {row.tasks}</DocP>
-          ))}
-        </>
-      )}
-    </div>
-  );
-}
-
 function CommonAppDoc({ student, acts, awards }: { student: Student; acts: Activity[]; awards: Award[] }) {
   return (
     <div className="max-w-2xl">
-      <DocH1>Common App — Activities & Honors</DocH1>
+      <h1 className="text-[22px] font-bold text-[var(--ink)] tracking-tight mb-1">Common App — Activities & Honors</h1>
       <DocSub>{student.name} · {student.school} · {student.major}</DocSub>
 
       <DocH2>Activities ({acts.length}/10)</DocH2>
