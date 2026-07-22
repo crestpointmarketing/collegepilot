@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Sparkles, Loader2, AlertTriangle, Check, X, BookmarkPlus } from 'lucide-react';
 import { DraftReview } from '@/components/essays/DraftReview';
+import { fetchStreamedJson } from '@/lib/essays/streamJson';
 import { createClient } from '@/lib/supabase';
 import { useApp } from '@/context/AppContext';
 import { SCHOOLS } from '@/lib/schools';
@@ -66,11 +67,7 @@ export default function EssayWorkspacePage() {
     if (mining) return;
     setMining(true); setErr(null);
     try {
-      const res = await fetch('/api/essay-angles', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error || `Server error ${res.status}`);
+      await fetchStreamedJson('/api/essay-angles', { projectId });
       await load();
       setTab('angles');
     } catch (e) { setErr(e instanceof Error ? e.message : 'Angle generation failed.'); }

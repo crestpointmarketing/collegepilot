@@ -112,23 +112,44 @@ export async function POST(req: NextRequest) {
     }
 
     const client = getAnthropicClient();
-    const review = await runReview(client, buildEssayReviewPrompt({
-      student, school, promptText,
-      wordLimit: lib?.wordLimit ?? proj.custom_prompt?.wordLimit,
-      essayText: rev.content as string,
-      selectedAngle,
-    }), rev.content as string);
+    const encoder = new TextEncoder();
 
-    const { data: saved, error: insErr } = await supabase.from('essay_reviews')
-      .insert({ revision_id: revisionId, user_id: user.id, data: review, model_version: MODEL })
-      .select('*').single();
-    if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
+    // Heartbeat stream — plain JSON responses 504 at the gateway on long runs.
+    const stream = new ReadableStream({
+      async start(controller) {
+        controller.enqueue(encoder.encode(' '));
+        const heartbeat = setInterval(() => {
+          try { controller.enqueue(encoder.encode(' ')); } catch { /* closed */ }
+        }, 5000);
+        try {
+          const review = await runReview(client, buildEssayReviewPrompt({
+            student, school, promptText,
+            wordLimit: lib?.wordLimit ?? proj.custom_prompt?.wordLimit,
+            essayText: rev.content as string,
+            selectedAngle,
+          }), rev.content as string);
 
-    await supabase.from('essay_projects')
-      .update({ workflow_status: 'needs_revision', updated_at: new Date().toISOString() })
-      .eq('id', proj.id).eq('user_id', user.id);
+          const { data: saved, error: insErr } = await supabase.from('essay_reviews')
+            .insert({ revision_id: revisionId, user_id: user.id, data: review, model_version: MODEL })
+            .select('*').single();
+          if (insErr) throw new Error(insErr.message);
 
-    return NextResponse.json({ review: saved });
+          await supabase.from('essay_projects')
+            .update({ workflow_status: 'needs_revision', updated_at: new Date().toISOString() })
+            .eq('id', proj.id).eq('user_id', user.id);
+
+          controller.enqueue(encoder.encode(JSON.stringify({ review: saved })));
+        } catch (err) {
+          console.error('essay-review stream error:', err);
+          controller.enqueue(encoder.encode(JSON.stringify({ error: err instanceof Error ? err.message : 'Essay review failed' })));
+        } finally {
+          clearInterval(heartbeat);
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
   } catch (err) {
     console.error('essay-review error:', err);
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Essay review failed' }, { status: 500 });

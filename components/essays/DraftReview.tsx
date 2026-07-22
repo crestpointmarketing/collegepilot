@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Loader2, Save, Sparkles, CheckCircle2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
+import { fetchStreamedJson } from '@/lib/essays/streamJson';
 import { Card, Chip, AlertCard, PrimaryButton, GhostButton, Eyebrow, type Tone } from '@/components/ui';
 import { RUBRIC_LABEL, type EssayReview, type RubricDimension } from '@/lib/essays/reviewSchema';
 
@@ -87,11 +88,7 @@ export function DraftReview({ projectId, wordLimit, workflowStatus, onChanged }:
     setBusy('review'); setErr(null);
     try {
       await supabase.from('essay_projects').update({ workflow_status: 'ready_for_review', updated_at: new Date().toISOString() }).eq('id', projectId);
-      const res = await fetch('/api/essay-review', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revisionId }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error || `Server error ${res.status}`);
+      await fetchStreamedJson('/api/essay-review', { revisionId });
       await load();
       onChanged();
       setViewRevId(revisionId);

@@ -144,34 +144,55 @@ export async function POST(req: NextRequest) {
     }
 
     const client = getAnthropicClient();
-    const output = await mineAngles(
-      client,
-      ANGLE_MINER_SYSTEM_PROMPT,
-      buildAngleMinerPrompt({ student, school, program: proj.program, promptText, wordLimit, blueprint, existingAngles, siblingEssayTopics: siblingTopics }),
-      allowedEvidenceNames(student),
-    );
+    const encoder = new TextEncoder();
 
-    // Force honesty labels in code, not trust: working_hypothesis always; a
-    // school hook can only be "verified" when the school has facts on file.
-    const hasFacts = !!getSchoolFacts(school.id);
-    const angles: EssayAngle[] = output.angles.map(a => ({
-      ...a,
-      schoolHookStatus: hasFacts ? a.schoolHookStatus : 'unverified',
-      status: 'working_hypothesis' as const,
-    }));
+    // Stream a heartbeat while the LLM runs — plain JSON responses hit the
+    // gateway timeout (504) on long generations. Mirrors /api/strategy.
+    const stream = new ReadableStream({
+      async start(controller) {
+        controller.enqueue(encoder.encode(' '));
+        const heartbeat = setInterval(() => {
+          try { controller.enqueue(encoder.encode(' ')); } catch { /* closed */ }
+        }, 5000);
+        try {
+          const output = await mineAngles(
+            client,
+            ANGLE_MINER_SYSTEM_PROMPT,
+            buildAngleMinerPrompt({ student, school, program: proj.program, promptText, wordLimit, blueprint, existingAngles, siblingEssayTopics: siblingTopics }),
+            allowedEvidenceNames(student),
+          );
 
-    const rows = angles.map(a => ({ project_id: projectId, user_id: user.id, data: a, disposition: 'proposed' }));
-    const { data: inserted, error: insErr } = await supabase.from('essay_angles').insert(rows).select('*');
-    if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
+          // Force honesty labels in code, not trust: working_hypothesis always;
+          // a school hook is only "verified" when the school has facts on file.
+          const hasFacts = !!getSchoolFacts(school.id);
+          const angles: EssayAngle[] = output.angles.map(a => ({
+            ...a,
+            schoolHookStatus: hasFacts ? a.schoolHookStatus : 'unverified',
+            status: 'working_hypothesis' as const,
+          }));
 
-    // First generation moves the workflow forward.
-    if (proj.workflow_status === 'not_started') {
-      await supabase.from('essay_projects')
-        .update({ workflow_status: 'exploring_angles', updated_at: new Date().toISOString() })
-        .eq('id', projectId).eq('user_id', user.id);
-    }
+          const rows = angles.map(a => ({ project_id: projectId, user_id: user.id, data: a, disposition: 'proposed' }));
+          const { data: inserted, error: insErr } = await supabase.from('essay_angles').insert(rows).select('*');
+          if (insErr) throw new Error(insErr.message);
 
-    return NextResponse.json({ angles: inserted });
+          if (proj.workflow_status === 'not_started') {
+            await supabase.from('essay_projects')
+              .update({ workflow_status: 'exploring_angles', updated_at: new Date().toISOString() })
+              .eq('id', projectId).eq('user_id', user.id);
+          }
+
+          controller.enqueue(encoder.encode(JSON.stringify({ angles: inserted })));
+        } catch (err) {
+          console.error('essay-angles stream error:', err);
+          controller.enqueue(encoder.encode(JSON.stringify({ error: err instanceof Error ? err.message : 'Angle generation failed' })));
+        } finally {
+          clearInterval(heartbeat);
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
   } catch (err) {
     console.error('essay-angles error:', err);
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Angle generation failed' }, { status: 500 });
