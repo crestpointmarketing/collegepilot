@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { Search, X, Plus, CalendarDays, Banknote, GraduationCap, Users, TrendingUp, BookOpen, Lightbulb } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { PageHeader, PrimaryButton, AlertCard } from '@/components/ui';
 import { fitScore, tierFor } from '@/lib/schools';
 import { TierBadge } from '@/components/shared/TierBadge';
 import { FitBar } from '@/components/shared/FitBar';
@@ -160,7 +161,7 @@ export default function SchoolsPage() {
   const v2 = currentStrategy?.v2 ?? null;
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in max-w-[1080px] mx-auto">
       {/* Portfolio analysis of the student's own list (when a v2 strategy exists) */}
       {v2 && (
         <PortfolioPanel
@@ -171,39 +172,25 @@ export default function SchoolsPage() {
         />
       )}
 
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="text-[26px] font-bold tracking-tight text-[var(--ink)]">Find Your Best-Fit Schools</h1>
-          {activeStudent && (
-            <p className="text-[var(--muted)] mt-1">
-              Showing fit scores for <span className="font-medium text-[var(--ink-soft)]">{activeStudent.name}</span>
-            </p>
-          )}
-        </div>
-        {selected.size > 0 && (
-          <div className="flex items-center gap-3">
-            <span className="text-[13.5px] text-[var(--muted)]">{selected.size} selected</span>
-            <button
-              onClick={() => handleAddToStrategy(selected)}
-              disabled={!currentStrategy}
-              className="flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: 'var(--accent)' }}
-            >
-              <Plus size={14} /> Add to Strategy
-            </button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title="Find Your Best-Fit Schools"
+        sub={`Showing fit scores for ${activeStudent.name}`}
+        actions={
+          selected.size > 0 ? (
+            <div className="flex items-center gap-3">
+              <span className="text-[13.5px] text-[var(--muted)]">{selected.size} selected</span>
+              <PrimaryButton onClick={() => handleAddToStrategy(selected)} className={!currentStrategy ? 'opacity-50 pointer-events-none' : ''}>
+                <Plus size={14} /> Add to Strategy
+              </PrimaryButton>
+            </div>
+          ) : undefined
+        }
+      />
       {saveMessage && (
-        <div className="mb-4 rounded border border-[var(--line)] bg-white px-4 py-2 text-[13px] text-[var(--ink-soft)] shadow-card">
-          {saveMessage}
-        </div>
+        <div className="mb-4"><AlertCard tone="neutral" title="Update" body={saveMessage} /></div>
       )}
       {!currentStrategy && (
-        <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-2 text-[13px] text-amber-800">
-          Generate a strategy before adding schools to the strategy list.
-        </div>
+        <div className="mb-4"><AlertCard tone="warning" title="No strategy yet" body="Generate a strategy before adding schools to the strategy list." /></div>
       )}
 
       <div className="flex gap-6">
@@ -246,7 +233,7 @@ export default function SchoolsPage() {
               <div className="relative">
                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-2)]" />
                 <input
-                  className="w-full pl-8 pr-3 py-1.5 rounded border border-[var(--line-strong)] text-[13px] focus:outline-none focus:border-[var(--accent)]"
+                  className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-[var(--line-strong)] text-[13px] focus:outline-none focus:border-[var(--accent)]"
                   placeholder="e.g. Computer Science"
                   value={pf.majorQuery}
                   onChange={e => setPf({ majorQuery: e.target.value })}
@@ -278,13 +265,13 @@ export default function SchoolsPage() {
                   setPendingFilters(reset);
                   setAppliedFilters(reset);
                 }}
-                className="flex-1 py-2 rounded border border-[var(--line-strong)] text-[13px] font-medium text-[var(--ink-soft)] hover:bg-[var(--bg-soft)] transition-colors"
+                className="flex-1 py-2 rounded-lg border border-[var(--line-strong)] text-[13px] font-medium text-[var(--ink-soft)] hover:bg-[var(--bg-soft)] transition-colors"
               >
                 Reset
               </button>
               <button
                 onClick={() => setAppliedFilters(pendingFilters)}
-                className="flex-1 py-2 rounded text-white text-[13px] font-medium transition-colors"
+                className="flex-1 py-2 rounded-lg text-white text-[13px] font-medium transition-colors"
                 style={{ background: 'var(--accent)' }}
               >
                 Apply
@@ -305,7 +292,7 @@ export default function SchoolsPage() {
                 <button
                   key={key}
                   onClick={() => setSortKey(key)}
-                  className={`px-3 py-1 rounded text-[12.5px] font-medium transition-all ${
+                  className={`px-3 py-1 rounded-lg text-[12.5px] font-medium transition-all ${
                     sortKey === key ? 'bg-[var(--accent-50)] text-[var(--accent)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'
                   }`}
                 >
@@ -350,7 +337,7 @@ export default function SchoolsPage() {
                       <div className="text-[12.5px] text-[var(--muted)] mb-3">
                         {school.city}, {school.state} · {school.type} · {school.size}
                       </div>
-                      <div className="grid grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <StatCell label="Accept Rate" value={`${school.accept}%`} />
                         <StatCell label="Avg SAT" value={school.sat.toString()} />
                         <StatCell label="Top Majors" value={school.majors.slice(0, 2).join(', ')} />
@@ -363,7 +350,7 @@ export default function SchoolsPage() {
                     <div className="flex flex-col gap-2 shrink-0">
                       <button
                         onClick={() => setDrawerSchool(school)}
-                        className="px-3 py-1.5 rounded border border-[var(--line-strong)] text-[12.5px] font-medium text-[var(--ink)] bg-white hover:bg-[var(--bg-soft)] transition-colors shadow-card whitespace-nowrap"
+                        className="px-3 py-1.5 rounded-lg border border-[var(--line-strong)] text-[12.5px] font-medium text-[var(--ink)] bg-white hover:bg-[var(--bg-soft)] transition-colors shadow-card whitespace-nowrap"
                       >
                         View details
                       </button>
@@ -373,7 +360,7 @@ export default function SchoolsPage() {
                           next.add(school.id);
                           setSelected(next);
                         }}
-                        className="px-3 py-1.5 rounded text-white text-[12.5px] font-medium transition-colors whitespace-nowrap"
+                        className="px-3 py-1.5 rounded-lg text-white text-[12.5px] font-medium transition-colors whitespace-nowrap"
                         style={{ background: 'var(--accent)' }}
                       >
                         + Add to list
@@ -457,7 +444,7 @@ function SchoolDrawer({ school, profile, onClose, onAdd }: {
         style={{ backdropFilter: 'blur(2px)' }}
       />
       <div
-        className="fixed right-0 top-0 h-full w-[560px] z-50 bg-white shadow-drawer flex flex-col animate-slide-in"
+        className="fixed right-0 top-0 h-full w-full max-w-[560px] z-50 bg-white shadow-drawer flex flex-col animate-slide-in"
         role="dialog"
         aria-modal="true"
       >
@@ -475,7 +462,7 @@ function SchoolDrawer({ school, profile, onClose, onAdd }: {
               <TierBadge tier={tier} />
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded flex items-center justify-center text-[var(--muted)] hover:bg-[var(--bg-soft)]"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--muted)] hover:bg-[var(--bg-soft)]"
                 aria-label="Close"
               >
                 <X size={16} />
@@ -488,7 +475,7 @@ function SchoolDrawer({ school, profile, onClose, onAdd }: {
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6">
 
           {/* Key stats */}
-          <div className="grid grid-cols-4 gap-3 p-4 bg-[var(--bg-soft)] rounded-card">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-[var(--bg-soft)] rounded-card">
             <StatCell label="Accept Rate" value={`${school.accept}%`} />
             <StatCell label="Avg SAT" value={school.sat.toString()} />
             <StatCell label="Avg GPA" value={school.gpa.toFixed(2)} />
@@ -502,7 +489,7 @@ function SchoolDrawer({ school, profile, onClose, onAdd }: {
           <DrawerSection icon={<BookOpen size={15} />} title="Programs & Highlights">
             <div className="flex flex-wrap gap-1.5">
               {school.majors.map(m => (
-                <span key={m} className="px-2.5 py-1 bg-[var(--bg-soft)] border border-[var(--line)] rounded text-[12px] text-[var(--ink-soft)]">{m}</span>
+                <span key={m} className="px-2.5 py-1 bg-[var(--bg-soft)] border border-[var(--line)] rounded-lg text-[12px] text-[var(--ink-soft)]">{m}</span>
               ))}
             </div>
             {school.highlights && school.highlights.length > 0 && (
@@ -585,7 +572,7 @@ function SchoolDrawer({ school, profile, onClose, onAdd }: {
             <DrawerSection icon={<Users size={15} />} title="Notable Alumni">
               <div className="flex flex-wrap gap-1.5">
                 {school.notableAlumni.map(a => (
-                  <span key={a} className="px-2.5 py-1 bg-[var(--bg-soft)] border border-[var(--line)] rounded text-[12px] text-[var(--ink-soft)]">{a}</span>
+                  <span key={a} className="px-2.5 py-1 bg-[var(--bg-soft)] border border-[var(--line)] rounded-lg text-[12px] text-[var(--ink-soft)]">{a}</span>
                 ))}
               </div>
             </DrawerSection>
@@ -596,13 +583,13 @@ function SchoolDrawer({ school, profile, onClose, onAdd }: {
         <div className="px-6 py-4 border-t border-[var(--line)] flex gap-3 shrink-0">
           <button
             onClick={onClose}
-            className="flex-1 py-2 rounded border border-[var(--line-strong)] text-[13.5px] font-medium text-[var(--ink)] hover:bg-[var(--bg-soft)] transition-colors"
+            className="flex-1 py-2 rounded-lg border border-[var(--line-strong)] text-[13.5px] font-medium text-[var(--ink)] hover:bg-[var(--bg-soft)] transition-colors"
           >
             Close
           </button>
           <button
             onClick={onAdd}
-            className="flex-1 py-2 rounded text-white text-[13.5px] font-medium transition-colors"
+            className="flex-1 py-2 rounded-lg text-white text-[13.5px] font-medium transition-colors"
             style={{ background: 'var(--accent)' }}
           >
             + Add to List
