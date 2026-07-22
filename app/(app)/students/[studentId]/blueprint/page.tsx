@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { ScrollText, Sparkles, RefreshCw, Loader2, AlertCircle, CheckCircle2, Compass, Pencil, Printer } from 'lucide-react';
+import { ScrollText, Sparkles, RefreshCw, Loader2, CheckCircle2, Compass, Pencil, Printer } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { PageHeader, PrimaryButton, GhostButton, AlertCard, EmptyState } from '@/components/ui';
 import { BlueprintDocument } from '@/components/blueprint/BlueprintDocument';
 import { PositioningPanel } from '@/components/blueprint/PositioningPanel';
 import type { Blueprint } from '@/lib/admissions/blueprint';
@@ -161,29 +162,24 @@ export default function BlueprintPage() {
   const firstName = student.name.split(' ')[0];
   const hyp = (id: string) => positioning?.hypotheses.find(h => h.id === id);
 
+  const headerActions = confirmed && !revisiting && blueprint && !busy ? (
+    <div className="flex items-center gap-2 no-print">
+      <GhostButton onClick={() => window.print()}><Printer size={14} /> Print / Save PDF</GhostButton>
+      <GhostButton onClick={generateBlueprint}><RefreshCw size={14} /> Regenerate</GhostButton>
+    </div>
+  ) : undefined;
+
   return (
-    <div className="animate-fade-in">
-      <div className="flex items-start justify-between mb-6 gap-3">
-        <div>
-          <h1 className="text-[26px] font-bold tracking-tight text-[var(--ink)]">Blueprint</h1>
-          <p className="text-[var(--muted)] mt-1">Designing the person before the application — starting from who {firstName} is.</p>
-        </div>
-        {confirmed && !revisiting && blueprint && !busy && (
-          <div className="flex items-center gap-2 no-print">
-            <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[var(--line-strong)] text-[13px] font-semibold text-[var(--ink)] hover:bg-[var(--bg-soft)] transition-colors">
-              <Printer size={14} /> Print / Save PDF
-            </button>
-            <button onClick={generateBlueprint} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[var(--line-strong)] text-[13px] font-semibold text-[var(--ink)] hover:bg-[var(--bg-soft)] transition-colors">
-              <RefreshCw size={14} /> Regenerate
-            </button>
-          </div>
-        )}
-      </div>
+    <div className="animate-fade-in max-w-[1080px] mx-auto">
+      <PageHeader
+        title="Blueprint"
+        sub={`Designing the person before the application — starting from who ${firstName} is.`}
+        actions={headerActions}
+      />
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-start gap-2">
-          <AlertCircle size={16} className="text-red-600 mt-0.5 shrink-0" />
-          <p className="text-[13px] text-red-700">{error}</p>
+        <div className="mb-4">
+          <AlertCard tone="critical" title="Generation failed" body={error} />
         </div>
       )}
 
@@ -193,21 +189,19 @@ export default function BlueprintPage() {
         <LoadingCard title="Designing the Blueprint…" steps={LOADING_STEPS} step={step} />
       ) : !positioning?.hypotheses?.length ? (
         /* Stage 1 empty — discover positioning */
-        <div className="bg-white rounded-card shadow-card px-8 py-14 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[var(--accent-50)] flex items-center justify-center mx-auto mb-4" style={{ color: 'var(--accent)' }}>
-            <Compass size={26} />
-          </div>
-          <h2 className="text-[19px] font-semibold text-[var(--ink)]">Discover {firstName}&apos;s positioning</h2>
-          <p className="text-[14px] text-[var(--muted)] mt-2 max-w-md mx-auto leading-relaxed">
-            Before any conclusion, the system proposes a few evidence-backed readings of who {firstName} might be. {firstName} decides which feels right — the Blueprint is built from that, never imposed.
-          </p>
-          <p className="text-[12.5px] text-[var(--muted-2)] mt-2">
-            {hasStrategy ? 'Reuses the assessment from the generated strategy.' : 'Runs a profile assessment first.'}
-          </p>
-          <button onClick={generatePositioning} className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-lg text-white text-[14px] font-semibold transition-opacity hover:opacity-90" style={{ background: 'var(--accent)' }}>
-            <Sparkles size={16} /> Propose positioning hypotheses
-          </button>
-        </div>
+        <EmptyState
+          icon={<Compass size={24} />}
+          title={`Discover ${firstName}'s positioning`}
+          body={
+            <>
+              Before any conclusion, the system proposes a few evidence-backed readings of who {firstName} might be. {firstName} decides which feels right — the Blueprint is built from that, never imposed.
+              <span className="block text-[12.5px] text-[var(--muted-2)] mt-2">
+                {hasStrategy ? 'Reuses the assessment from the generated strategy.' : 'Runs a profile assessment first.'}
+              </span>
+            </>
+          }
+          action={<PrimaryButton onClick={generatePositioning}><Sparkles size={16} /> Propose positioning hypotheses</PrimaryButton>}
+        />
       ) : !confirmed || revisiting ? (
         /* Stage 1 — validate + converge */
         <PositioningPanel
@@ -249,18 +243,12 @@ export default function BlueprintPage() {
           {blueprint ? (
             <BlueprintDocument blueprint={blueprint} />
           ) : (
-            <div className="bg-white rounded-card shadow-card px-8 py-12 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-[var(--accent-50)] flex items-center justify-center mx-auto mb-4" style={{ color: 'var(--accent)' }}>
-                <ScrollText size={26} />
-              </div>
-              <h2 className="text-[19px] font-semibold text-[var(--ink)]">Build the full Blueprint</h2>
-              <p className="text-[14px] text-[var(--muted)] mt-2 max-w-md mx-auto leading-relaxed">
-                Now that the identity is confirmed, generate the six-volume strategy book — every claim carries an evidence label, nothing is invented.
-              </p>
-              <button onClick={generateBlueprint} className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-lg text-white text-[14px] font-semibold transition-opacity hover:opacity-90" style={{ background: 'var(--accent)' }}>
-                <Sparkles size={16} /> Generate Blueprint
-              </button>
-            </div>
+            <EmptyState
+              icon={<ScrollText size={24} />}
+              title="Build the full Blueprint"
+              body="Now that the identity is confirmed, generate the six-volume strategy book — every claim carries an evidence label, nothing is invented."
+              action={<PrimaryButton onClick={generateBlueprint}><Sparkles size={16} /> Generate Blueprint</PrimaryButton>}
+            />
           )}
         </div>
       )}
