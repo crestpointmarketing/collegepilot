@@ -8,7 +8,7 @@ import { DIMENSION_LABELS, derivePortfolioAlerts } from '@/components/assessment
 import {
   PageHeader, Card, Chip, StatTile, AlertCard, GhostButton, JourneyStepper, type Tone,
 } from '@/components/ui';
-import { isPositioningConfirmed } from '@/lib/admissions/journey';
+import { isPositioningConfirmed, isDirectionConfirmed } from '@/lib/admissions/journey';
 import type { DimensionKey } from '@/lib/admissions/assessment';
 import type { Strategy } from '@/types';
 
@@ -49,8 +49,16 @@ export default function OverviewPage() {
   const positioning = student.positioning;
   const confirmed = isPositioningConfirmed(positioning);
 
-  // Journey progress: Evidence(0) Identity(1) Direction(2) Programs(3) Portfolio(4) Blueprint(5)
-  const current = blueprint ? 5 : confirmed ? 2 : positioning?.hypotheses?.length ? 1 : v2 ? 1 : 1;
+  // Journey progress: Evidence(0) Identity(1) Direction(2) Programs(3) Portfolio(4) Blueprint(5).
+  // Report the furthest stage reached, so a student with a strategy shows Portfolio,
+  // not a stale "Identity".
+  const directionDone = isDirectionConfirmed(student.direction);
+  const current = blueprint ? 5
+    : v2 ? 4
+    : directionDone ? 3
+    : confirmed ? 2
+    : positioning?.hypotheses?.length ? 1
+    : 0;
   const stageLabel = ['Evidence', 'Identity', 'Direction', 'Programs', 'Portfolio', 'Blueprint'][current];
 
   // Next best action — dynamic from real state.
@@ -192,7 +200,7 @@ export default function OverviewPage() {
             <ul className="flex flex-col gap-2 text-[12px] text-[var(--ink)]">
               {blueprint && <li><span className="text-[var(--muted)]">Blueprint — </span>{blueprint.draftLabel} generated</li>}
               {confirmed && <li><span className="text-[var(--muted)]">Identity — </span>positioning confirmed by student</li>}
-              {positioning?.hypotheses?.length && !confirmed && <li><span className="text-[var(--muted)]">Identity — </span>{positioning.hypotheses.length} hypotheses generated</li>}
+              {!!positioning?.hypotheses?.length && !confirmed && <li><span className="text-[var(--muted)]">Identity — </span>{positioning.hypotheses.length} hypotheses generated</li>}
               {v2 && <li><span className="text-[var(--muted)]">Strategy — </span>generated (engine v{v2.engineVersion})</li>}
               <li><span className="text-[var(--muted)]">Profile — </span>updated {student.updated}</li>
             </ul>

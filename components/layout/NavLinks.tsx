@@ -36,7 +36,11 @@ export function NavLinks() {
   const pathname = usePathname();
   const studentMatch = /\/students\/([^/]+)/.exec(pathname);
   const currentStudentId = studentMatch?.[1];
-  const activeTab = ALL_STUDENT_NAV.find(n => pathname.endsWith(`/${n.id}`) || pathname.includes(`/${n.id}/`))?.id;
+  // School detail (/schools/[id]) lives under "Programs & Schools" — keep that item lit.
+  const onSchoolDetail = /\/schools\/[^/]+$/.test(pathname);
+  const activeTab = onSchoolDetail
+    ? 'programs'
+    : ALL_STUDENT_NAV.find(n => pathname.endsWith(`/${n.id}`) || pathname.includes(`/${n.id}/`))?.id;
 
   const itemCls = (active: boolean) =>
     `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
