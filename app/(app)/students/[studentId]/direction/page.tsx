@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { Compass, Sparkles, AlertTriangle, Loader2, CheckCircle2, AlertCircle, ArrowRight, Check } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import {
-  PageHeader, Card, Chip, AlertCard, EmptyState, PrimaryButton, Eyebrow, type Tone,
+  PageHeader, Card, Chip, AlertCard, EmptyState, PrimaryButton, GhostButton, Eyebrow, type Tone,
 } from '@/components/ui';
 import {
   isPositioningConfirmed, isDirectionConfirmed,
@@ -83,13 +83,17 @@ export default function DirectionPage() {
   }
 
   async function confirm() {
-    if (!student || !direction) return;
+    if (!student || !direction || saving) return;
     const selected: DirectionSelection[] = Object.entries(roles)
       .filter(([, r]) => r !== 'none')
       .map(([directionId, r]) => ({ directionId, role: r as DirectionRole }));
     setSaving(true);
-    await saveStudentDraft({ ...student, direction: { ...direction, selected } });
+    setError(null);
+    const ok = await saveStudentDraft({ ...student, direction: { ...direction, selected } });
     setSaving(false);
+    if (!ok) {
+      setError('Could not save your direction — your session may have expired. Refresh the page, sign in again, and confirm once more.');
+    }
   }
 
   const primaryCount = Object.values(roles).filter(r => r === 'primary').length;
@@ -208,16 +212,32 @@ export default function DirectionPage() {
           </div>
 
           <div className="flex items-center justify-between gap-3 flex-wrap sticky bottom-4 mt-4 bg-white rounded-card shadow-card border border-[var(--line)] px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              {valid ? <CheckCircle2 size={16} className="text-emerald-500" /> : <AlertCircle size={16} className="text-amber-500" />}
-              <span className={`text-[13px] ${valid ? 'text-[var(--ink)]' : 'text-[var(--muted)]'}`}>
-                {primaryCount === 0 ? 'Pick exactly one Primary direction.' : primaryCount > 1 ? 'Only one Primary allowed.' : 'Ready to confirm.'}
+            <div className="flex items-center gap-2 min-w-0">
+              {error ? <AlertCircle size={16} className="text-red-500 shrink-0" />
+                : confirmedNow ? <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                : valid ? <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                : <AlertCircle size={16} className="text-amber-500 shrink-0" />}
+              <span className={`text-[13px] ${error ? 'text-red-600' : confirmedNow || valid ? 'text-[var(--ink)]' : 'text-[var(--muted)]'}`}>
+                {error ? error
+                  : confirmedNow ? 'Direction confirmed — continue to Programs & Schools.'
+                  : primaryCount === 0 ? 'Pick exactly one Primary direction.'
+                  : primaryCount > 1 ? 'Only one Primary allowed.'
+                  : 'Ready to confirm.'}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <PrimaryButton onClick={confirm} className={!valid || saving ? 'opacity-40 pointer-events-none' : ''}>
-                <Sparkles size={15} /> Confirm direction
-              </PrimaryButton>
+            <div className="flex items-center gap-2 shrink-0">
+              {confirmedNow ? (
+                <>
+                  <GhostButton onClick={confirm} className={!valid || saving ? 'opacity-40 pointer-events-none' : ''}>
+                    {saving ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Update
+                  </GhostButton>
+                  <PrimaryButton href={`/students/${studentId}/programs`}>Continue to Programs &amp; Schools <ArrowRight size={15} /></PrimaryButton>
+                </>
+              ) : (
+                <PrimaryButton onClick={confirm} className={!valid || saving ? 'opacity-40 pointer-events-none' : ''}>
+                  {saving ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Confirm direction
+                </PrimaryButton>
+              )}
             </div>
           </div>
         </>
