@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Sparkles, Loader2, AlertTriangle, Check, X, BookmarkPlus, PenLine } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, AlertTriangle, Check, X, BookmarkPlus } from 'lucide-react';
+import { DraftReview } from '@/components/essays/DraftReview';
 import { createClient } from '@/lib/supabase';
 import { useApp } from '@/context/AppContext';
 import { SCHOOLS } from '@/lib/schools';
@@ -223,15 +224,12 @@ export default function EssayWorkspacePage() {
       )}
 
       {tab === 'draft' && (
-        <Card bodyClassName="px-6 py-12 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-[var(--accent-50)] flex items-center justify-center mx-auto mb-3" style={{ color: 'var(--accent)' }}>
-            <PenLine size={22} />
-          </div>
-          <h3 className="text-[15px] font-semibold text-[var(--ink)] mb-1.5">Draft &amp; Review is coming next (E3)</h3>
-          <p className="text-[13px] text-[var(--muted)] max-w-md mx-auto leading-relaxed">
-            Paste your draft, keep an immutable version history, and get an AO-style structured critique — quoted sentences, claim verification, and question-based revision guidance. Never replacement prose.
-          </p>
-        </Card>
+        <DraftReview
+          projectId={projectId}
+          wordLimit={wordLimit}
+          workflowStatus={project.workflow_status}
+          onChanged={() => { void load(); }}
+        />
       )}
     </div>
   );

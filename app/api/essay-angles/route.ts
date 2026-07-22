@@ -41,7 +41,7 @@ async function mineAngles(client: Anthropic, system: string, prompt: string, all
     const content = feedback ? `${prompt}\n\nPREVIOUS ATTEMPT REJECTED — fix these issues:\n${feedback}` : prompt;
     const stream = client.messages.stream({
       model: MODEL,
-      max_tokens: 6000,
+      max_tokens: 9000,
       system,
       messages: [{ role: 'user', content }],
       tools: [{
@@ -52,12 +52,26 @@ async function mineAngles(client: Anthropic, system: string, prompt: string, all
       tool_choice: { type: 'tool', name: 'submit_angles' },
     });
     const message = await stream.finalMessage();
+    if (message.stop_reason === 'max_tokens') { feedback = 'Output was truncated. Keep each angle substantially shorter.'; continue; }
     const block = message.content.find(b => b.type === 'tool_use');
     if (!block || block.type !== 'tool_use') { feedback = 'No tool call was produced.'; continue; }
-    // Non-strict tool calls sometimes return the array as a JSON string — unwrap.
+    // Non-strict tool calls sometimes return arrays as JSON strings, at any
+    // depth — normalize before validating.
     const input = block.input as Record<string, unknown>;
     if (typeof input?.angles === 'string') {
       try { input.angles = JSON.parse(input.angles); } catch { /* leave for zod to reject */ }
+    }
+    if (Array.isArray(input?.angles)) {
+      for (const item of input.angles as Array<Record<string, unknown>>) {
+        if (!item || typeof item !== 'object') continue;
+        for (const key of ['personalEvidence', 'openQuestions']) {
+          const v = item[key];
+          if (typeof v === 'string') {
+            try { item[key] = JSON.parse(v); } catch { item[key] = [v]; }
+            if (typeof item[key] === 'string') item[key] = [item[key]];
+          }
+        }
+      }
     }
     const parsed = angleMinerOutputSchema.safeParse(input);
     if (!parsed.success) {

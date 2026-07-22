@@ -178,7 +178,7 @@ function AddEssayModal({ studentId, preferredSchoolIds, onClose, onCreated }: {
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
           <div>
             <label className="block text-[12px] font-semibold text-[var(--ink)] mb-1.5 uppercase tracking-wide">School</label>
-            <select value={schoolId} onChange={e => { setSchoolId(e.target.value); setPickedIds(new Set()); }}
+            <select value={schoolId} onChange={e => { setSchoolId(e.target.value); setPickedIds(new Set()); setMode('library'); }}
               className="w-full px-3 py-2 rounded-lg border border-[var(--line-strong)] text-[13.5px] bg-white focus:outline-none focus:border-[var(--accent)]">
               <option value="">Select a school…</option>
               {onList.length > 0 && <optgroup label="On this student's list">{onList.map(s => <option key={s.id} value={s.id}>{s.short}{LIBRARY_SCHOOL_IDS.includes(s.id) ? '' : ' (custom prompt only)'}</option>)}</optgroup>}
