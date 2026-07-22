@@ -1,14 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   Sparkles, ArrowRight, Star, CircleCheck, Circle, TriangleAlert,
   FileText, Users, PenLine, GraduationCap, Banknote, Send, FolderCheck, ListChecks,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
-import { PageHeader, Chip } from '@/components/ui';
+import { PageHeader, Chip, PrimaryButton, EmptyState } from '@/components/ui';
 import { TASK_MATERIALS, deriveTimelineTasks, parsePlanMonth } from '@/lib/timelineTasks';
 
 /* ── Task derivation (stable content-hash ids, shared with the route) ── */
@@ -55,18 +54,14 @@ export default function TimelinePage() {
 
   if (!strategy) {
     return (
-      <div className="animate-fade-in">
+      <div className="animate-fade-in max-w-[1080px] mx-auto">
         <PageHeader title="Timeline" sub={`${student.name} · deadline-driven execution plan`} />
-        <div className="bg-white rounded-card shadow-card p-16 text-center">
-          <div className="w-12 h-12 rounded-full bg-[var(--accent-50)] flex items-center justify-center mx-auto mb-4">
-            <Sparkles size={20} style={{ color: 'var(--accent)' }} />
-          </div>
-          <h3 className="text-[16px] font-semibold text-[var(--ink)] mb-2">No execution plan yet</h3>
-          <p className="text-[13px] text-[var(--muted)] mb-6 max-w-sm mx-auto">The timeline is derived from the strategy&apos;s deadline-driven plan.</p>
-          <Link href={`/students/${studentId}/strategy`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium" style={{ background: 'var(--accent)' }}>
-            Generate a strategy <ArrowRight size={14} />
-          </Link>
-        </div>
+        <EmptyState
+          icon={<Sparkles size={24} />}
+          title="No execution plan yet"
+          body="The timeline is derived from the strategy's deadline-driven plan."
+          action={<PrimaryButton href={`/students/${studentId}/strategy`}>Generate a strategy <ArrowRight size={14} /></PrimaryButton>}
+        />
       </div>
     );
   }
@@ -98,7 +93,7 @@ export default function TimelinePage() {
   const months = strategy.plan.map(p => p.month);
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in max-w-[1080px] mx-auto">
       <PageHeader
         title="Timeline"
         sub={`${student.name} · deadline-driven execution plan`}

@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Search, BookOpen, TrendingUp, Users, Lightbulb, AlertTriangle, ExternalLink, CheckCircle, X, ChevronDown, RefreshCw, Target, Microscope } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { PageHeader } from '@/components/ui';
 import { IntelligenceCenter } from '@/components/intelligence/IntelligenceCenter';
 
 interface ProgramOption {
@@ -655,14 +656,11 @@ export default function ResearchPage() {
     : [];
 
   return (
-    <div className="max-w-[1100px] mx-auto">
-      {/* Header */}
-      <div className="mb-5">
-        <h1 className="text-[26px] font-bold text-[var(--ink)] tracking-tight mb-1">Admission Intelligence</h1>
-        <p className="text-[14px] text-[var(--ink-soft)]">
-          {activeStudent ? `Why each school fits ${activeStudent.name}, how to apply, and live school research` : 'School fit, application strategy, and live research'}
-        </p>
-      </div>
+    <div className="max-w-[1080px] mx-auto animate-fade-in">
+      <PageHeader
+        title="Admission Intelligence"
+        sub={activeStudent ? `Why each school fits ${activeStudent.name}, how to apply, and live school research` : 'School fit, application strategy, and live research'}
+      />
 
       {/* Tabs */}
       <div className="flex items-center gap-1 mb-6 border-b border-[var(--line)]">
