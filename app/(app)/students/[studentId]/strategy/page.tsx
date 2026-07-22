@@ -21,6 +21,7 @@ import {
   PolarGrid, PolarAngleAxis, LabelList,
 } from 'recharts';
 import { useApp } from '@/context/AppContext';
+import { PageHeader, PrimaryButton, GhostButton, Card, EmptyState } from '@/components/ui';
 import { LOADING_STEPS } from '@/lib/data';
 import { strategySchema } from '@/lib/schemas';
 import { getSchoolFacts } from '@/lib/admissions/schoolFacts';
@@ -918,7 +919,7 @@ export default function StrategyPage() {
 
   if (generating) {
     return (
-      <div className="animate-fade-in">
+      <div className="animate-fade-in max-w-[1080px] mx-auto">
         <PageHead title="Admissions Strategy" sub={`${student.name} · ${student.school}`} />
         <div className="bg-white rounded-card shadow-card p-16 flex flex-col items-center">
           <div className="w-10 h-10 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin mb-6" />
@@ -945,29 +946,21 @@ export default function StrategyPage() {
 
   if (!strategy) {
     return (
-      <div className="animate-fade-in">
+      <div className="animate-fade-in max-w-[1080px] mx-auto">
         <PageHead title="Admissions Strategy" sub={`${student.name} · ${student.school}`}
-          actions={
-            <button onClick={() => handleGenerate()} className="flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium" style={{ background: 'var(--accent)' }}>
-              <Sparkles size={14} /> Generate Strategy
-            </button>
-          }
+          actions={<PrimaryButton onClick={() => handleGenerate()}><Sparkles size={14} /> Generate Strategy</PrimaryButton>}
         />
-        <div className="bg-white rounded-card shadow-card p-16 text-center">
-          <div className="w-12 h-12 rounded-full bg-[var(--accent-50)] flex items-center justify-center mx-auto mb-4">
-            <Sparkles size={20} style={{ color: 'var(--accent)' }} />
+        {genError && (
+          <div className="mb-5 mx-auto max-w-sm bg-red-50 border border-red-200 text-red-700 text-[12.5px] rounded-lg px-4 py-3">
+            Error: {genError}
           </div>
-          <h3 className="text-[16px] font-semibold text-[var(--ink)] mb-2">No strategy generated yet</h3>
-          <p className="text-[13px] text-[var(--muted)] mb-6 max-w-xs mx-auto">Run the analysis to produce positioning, school list, and execution plan.</p>
-          {genError && (
-            <div className="mb-5 mx-auto max-w-sm bg-red-50 border border-red-200 text-red-700 text-[12.5px] rounded-lg px-4 py-3">
-              Error: {genError}
-            </div>
-          )}
-          <button onClick={() => handleGenerate()} className="inline-flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium" style={{ background: 'var(--accent)' }}>
-            <Sparkles size={14} /> Generate Strategy
-          </button>
-        </div>
+        )}
+        <EmptyState
+          icon={<Sparkles size={24} />}
+          title="No strategy generated yet"
+          body="Run the analysis to produce positioning, a Reach / Match / Safety list, and an execution plan."
+          action={<PrimaryButton onClick={() => handleGenerate()}><Sparkles size={14} /> Generate Strategy</PrimaryButton>}
+        />
       </div>
     );
   }
@@ -975,19 +968,15 @@ export default function StrategyPage() {
   const originalProb = parseChance(strategy.meta?.overall_success_probability ?? '0');
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in max-w-[1080px] mx-auto">
       <PageHead
         title="Admissions Strategy"
         sub={`${student.name} · ${student.school} · ${student.major}`}
         actions={
-          <div className="flex items-center gap-2">
-            <button onClick={() => handleGenerate(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded border border-[var(--line-strong)] text-[13.5px] font-medium bg-white hover:bg-[var(--bg-soft)] transition-colors shadow-card">
-              <Sparkles size={14} /> Regenerate
-            </button>
-            <button onClick={handleApprove} className="flex items-center gap-1.5 px-4 py-2 rounded text-white text-[13.5px] font-medium" style={{ background: 'var(--accent)' }}>
-              Approve & Continue <ArrowRight size={14} />
-            </button>
-          </div>
+          <>
+            <GhostButton onClick={() => handleGenerate(true)}><Sparkles size={14} /> Regenerate</GhostButton>
+            <PrimaryButton onClick={handleApprove}>Approve &amp; Continue <ArrowRight size={14} /></PrimaryButton>
+          </>
         }
       />
 
@@ -1411,16 +1400,9 @@ function ExecutionTimeline({ plan }: { plan: Array<{ month: string; tasks: strin
 
 /* ── Shared ───────────────────────────────────────────────── */
 
+/** Thin alias so existing call sites keep working while rendering via the shared PageHeader. */
 function PageHead({ title, sub, actions }: { title: string; sub: string; actions?: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between mb-6">
-      <div>
-        <h1 className="text-[26px] font-bold tracking-tight text-[var(--ink)]">{title}</h1>
-        <p className="text-[var(--muted)] mt-1">{sub}</p>
-      </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
-    </div>
-  );
+  return <PageHeader title={title} sub={sub} actions={actions} />;
 }
 
 function cleanStrategyText(text: string): string {
@@ -1489,20 +1471,16 @@ function AnalysisBlock({ icon, label, color, text }: { icon: React.ReactNode; la
   );
 }
 
+/** Numbered section card — renders through the shared Card primitive. */
 function StratCard({ num, title, icon, children }: { num: string; title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-card shadow-card overflow-hidden">
-      <div className="px-6 py-3.5 border-b border-[var(--line)] flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[var(--accent-50)] flex items-center justify-center" style={{ color: 'var(--accent)' }}>
-            {icon}
-          </div>
-          <h2 className="text-[15px] font-semibold text-[var(--ink)]">{title}</h2>
-        </div>
-        <span className="text-[11px] font-bold text-[var(--muted)] tabular-nums">{num}</span>
-      </div>
-      <div className="px-6 py-5">{children}</div>
-    </div>
+    <Card
+      title={title}
+      icon={icon}
+      actions={<span className="text-[11px] font-bold text-[var(--muted)] tabular-nums">{num}</span>}
+    >
+      {children}
+    </Card>
   );
 }
 
