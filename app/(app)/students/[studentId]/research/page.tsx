@@ -1,11 +1,9 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { Search, BookOpen, TrendingUp, Users, Lightbulb, AlertTriangle, ExternalLink, CheckCircle, X, ChevronDown, RefreshCw, Target, Microscope } from 'lucide-react';
+import { Search, BookOpen, TrendingUp, Users, Lightbulb, AlertTriangle, ExternalLink, CheckCircle, X, ChevronDown, RefreshCw } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { PageHeader } from '@/components/ui';
-import { IntelligenceCenter } from '@/components/intelligence/IntelligenceCenter';
 
 interface ProgramOption {
   name: string;
@@ -422,17 +420,7 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
 }
 
 export default function ResearchPage() {
-  const { schools, students, strategies } = useApp();
-  const params = useParams();
-  const studentId = params.studentId as string;
-  const activeStudent = students.find(s => s.id === studentId) ?? null;
-  const v2 = strategies[studentId]?.v2 ?? null;
-  const [tab, setTab] = useState<'match' | 'deep'>('match');
-  // '' = user hasn't chosen; fall back to the first school on the student's list.
-  const [matchSchoolChoice, setMatchSchoolChoice] = useState<string>('');
-  const matchSchoolId = matchSchoolChoice || (v2?.evaluations?.[0]?.schoolId ?? '');
-  const setMatchSchoolId = setMatchSchoolChoice;
-  const matchSchool = schools.find(s => s.id === matchSchoolId) ?? null;
+  const { schools } = useApp();
   const [schoolInput, setSchoolInput] = useState('');
   const [degreeInput, setDegreeInput] = useState('Undergraduate');
   const [departmentInput, setDepartmentInput] = useState('');
@@ -658,56 +646,10 @@ export default function ResearchPage() {
   return (
     <div className="max-w-[1080px] mx-auto animate-fade-in">
       <PageHeader
-        title="Admission Intelligence"
-        sub={activeStudent ? `Why each school fits ${activeStudent.name}, how to apply, and live school research` : 'School fit, application strategy, and live research'}
+        title="Deep Research"
+        sub="Live web research on schools and programs — official sources plus community insight. Per-school fit, strategy, and the AO read now live on each school's detail page."
       />
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 mb-6 border-b border-[var(--line)]">
-        {([['match', 'Match & Strategy', Target], ['deep', 'Deep Research', Microscope]] as const).map(([id, label, Icon]) => (
-          <button key={id} onClick={() => setTab(id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-[13.5px] font-semibold border-b-2 -mb-px transition-colors ${
-              tab === id ? 'border-[var(--accent)] text-[var(--accent)]' : 'border-transparent text-[var(--muted)] hover:text-[var(--ink)]'
-            }`}>
-            <Icon size={14} /> {label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Match & Strategy tab ── */}
-      {tab === 'match' && (
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <label className="text-[12px] font-semibold text-[var(--ink)] uppercase tracking-wide">School</label>
-            <select
-              value={matchSchoolId}
-              onChange={e => setMatchSchoolId(e.target.value)}
-              className="px-3 py-2 text-[13.5px] border border-[var(--line-strong)] rounded-lg bg-white text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
-            >
-              <option value="">Select a school…</option>
-              {v2?.evaluations?.length ? (
-                <optgroup label="On this student's list">
-                  {v2.evaluations.map(e => <option key={e.schoolId} value={e.schoolId}>{e.short}</option>)}
-                </optgroup>
-              ) : null}
-              <optgroup label="All schools">
-                {schools.map(s => <option key={s.id} value={s.id}>{s.short}</option>)}
-              </optgroup>
-            </select>
-            {matchSchool && <span className="text-[12px] text-[var(--muted)]">{matchSchool.name} · #{matchSchool.ranking}</span>}
-          </div>
-          {!activeStudent ? (
-            <div className="bg-white border border-[var(--line)] rounded-xl p-10 text-center text-[13px] text-[var(--muted)]">Student not found.</div>
-          ) : !matchSchool ? (
-            <div className="bg-white border border-[var(--line)] rounded-xl p-10 text-center text-[13px] text-[var(--muted)]">Pick a school to see the fit and application analysis.</div>
-          ) : (
-            <IntelligenceCenter key={matchSchool.id} student={activeStudent} school={matchSchool} v2={v2} studentId={studentId} />
-          )}
-        </div>
-      )}
-
-      {tab === 'deep' && (
-      <>
       {/* Input Form */}
       <div className="bg-white border border-[var(--line)] rounded-xl p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
@@ -1114,8 +1056,6 @@ export default function ResearchPage() {
             )}
           </div>
         </div>
-      )}
-      </>
       )}
     </div>
   );

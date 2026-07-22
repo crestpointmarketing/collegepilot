@@ -62,7 +62,7 @@ export default function ProgramsPage() {
       sub="Application Pathways — University → College → Program → Round"
       actions={
         <Link href={`/students/${studentId}/research`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[var(--line-strong)] text-[13px] font-semibold text-[var(--ink)] hover:bg-[var(--bg-soft)] transition-colors">
-          <FlaskConical size={14} /> Admission intelligence
+          <FlaskConical size={14} /> Deep research
         </Link>
       }
     />
