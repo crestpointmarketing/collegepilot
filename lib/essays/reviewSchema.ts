@@ -4,7 +4,7 @@
  * sentences and ask questions, never supply replacement prose.
  */
 import { z } from 'zod';
-import { closeObjects } from '@/lib/admissions/assessment';
+import { closeObjects } from '../admissions/assessment';
 
 export const RUBRIC_DIMENSIONS = ['prompt_fit', 'specificity', 'student_voice', 'structure', 'ending_takeaway'] as const;
 export type RubricDimension = (typeof RUBRIC_DIMENSIONS)[number];

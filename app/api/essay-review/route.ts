@@ -12,7 +12,7 @@ import type { EssayAngle, EssayProjectRow } from '@/lib/essays/types';
 import type { Student } from '@/types';
 
 export const runtime = 'nodejs';
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const MODEL = 'claude-sonnet-5';
 const requestSchema = z.object({ revisionId: z.string().uuid() });

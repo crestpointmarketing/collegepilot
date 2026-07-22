@@ -5,11 +5,10 @@
  * the student's confirmed identity/direction and may only cite evidence that
  * exists in the profile. School traits without a provided fact are unverified.
  */
-import type { Student } from '@/types';
-import type { School } from '@/types';
-import { serializeStudentProfile, serializeConfirmedFocus } from '@/lib/prompts';
-import { getSchoolFacts } from '@/lib/admissions/schoolFacts';
-import type { Blueprint } from '@/lib/admissions/blueprint';
+import type { Student, School } from '../../types';
+import { serializeStudentProfile, serializeConfirmedFocus } from '../prompts';
+import { getSchoolFacts } from '../admissions/schoolFacts';
+import type { Blueprint } from '../admissions/blueprint';
 
 export const ANGLE_MINER_SYSTEM_PROMPT = `You are an essay strategist for the Blueprint Method. You mine ANGLES for a specific supplemental-essay prompt — you never write essay content.
 

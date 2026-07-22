@@ -14,7 +14,7 @@ import type { Blueprint } from '@/lib/admissions/blueprint';
 import type { Student } from '@/types';
 
 export const runtime = 'nodejs';
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const MODEL = 'claude-sonnet-5';
 

@@ -4,7 +4,7 @@
  * cannot return submission-ready text.
  */
 import { z } from 'zod';
-import { closeObjects } from '@/lib/admissions/assessment';
+import { closeObjects } from '../admissions/assessment';
 
 export const essayAngleSchema = z.object({
   angle: z.string().describe('One-line core angle — a direction to test, never a thesis statement to paste.'),

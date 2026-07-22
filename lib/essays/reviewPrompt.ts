@@ -3,9 +3,9 @@
  * claim verification against the profile, question-based guidance — never
  * replacement prose.
  */
-import type { Student, School } from '@/types';
-import { serializeStudentProfile } from '@/lib/prompts';
-import { getSchoolFacts } from '@/lib/admissions/schoolFacts';
+import type { Student, School } from '../../types';
+import { serializeStudentProfile } from '../prompts';
+import { getSchoolFacts } from '../admissions/schoolFacts';
 import type { EssayAngle } from './types';
 
 export const ESSAY_REVIEW_SYSTEM_PROMPT = `You are a veteran admissions reader giving a structured critique of a student's supplemental-essay draft for the Blueprint Method.
