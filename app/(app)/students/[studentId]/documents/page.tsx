@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Printer, Download, FileSpreadsheet, File, ScrollText, ArrowRight } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
-import { PageHeader, AlertCard, GhostButton, Chip, PrimaryButton } from '@/components/ui';
+import { PageHeader, AlertCard, GhostButton, Chip, PrimaryButton, type Tone } from '@/components/ui';
 import { CHAR_LIMITS } from '@/lib/characterLimits';
 import type { Activity, Award, Strategy, Student } from '@/types';
 
@@ -213,16 +213,24 @@ export default function DocumentsPage() {
   );
 }
 
-/* ── Concise strategy summary — core answers only ── */
+/* ── Strategy summary — core answers, visually structured ── */
 
-function SumRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="py-3 border-b border-[var(--line)] last:border-0">
-      <div className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--muted)] mb-1">{label}</div>
-      <div className="text-[14px] text-[var(--ink)] leading-relaxed">{children}</div>
-    </div>
-  );
+function SumLabel({ children }: { children: React.ReactNode }) {
+  return <div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-[var(--muted)] mb-2">{children}</div>;
 }
+
+/** Competitiveness tier → chip tone. */
+function levelTone(level: string): Tone {
+  if (/low/i.test(level)) return 'warning';
+  if (/high|excellent/i.test(level)) return 'positive';
+  return 'accent';
+}
+
+const TIER_META_SUM: { key: 'reach' | 'match' | 'safety'; label: string; tone: Tone; ring: string }[] = [
+  { key: 'reach', label: 'Reach', tone: 'critical', ring: 'bg-[#FEE2E2] text-[#B91C1C]' },
+  { key: 'match', label: 'Match', tone: 'accent', ring: 'bg-[var(--accent-50)] text-[var(--accent)]' },
+  { key: 'safety', label: 'Safety', tone: 'positive', ring: 'bg-[#DCFCE7] text-[#15803D]' },
+];
 
 function StrategySummary({ student, strategy, firstName }: { student: Student; strategy: Strategy | null; firstName: string }) {
   if (!strategy) {
@@ -234,38 +242,75 @@ function StrategySummary({ student, strategy, firstName }: { student: Student; s
   }
   const v2 = strategy.v2 ?? null;
   const outlook = v2
-    ? `${v2.portfolio.pAtLeastOne.lowerPct}–${v2.portfolio.pAtLeastOne.upperPct}% chance of at least one admit`
+    ? `${v2.portfolio.pAtLeastOne.lowerPct}–${v2.portfolio.pAtLeastOne.upperPct}%`
     : (strategy.meta?.overall_success_probability ?? '—');
   const comp = strategy.competitiveness;
-  const tierNames = (list: { name: string }[]) => list.map(s => s.name).join(', ');
+  const total = strategy.schools.reach.length + strategy.schools.match.length + strategy.schools.safety.length;
 
   return (
     <div className="max-w-2xl">
       <div className="text-[22px] font-bold text-[var(--ink)] tracking-tight">Strategy Summary</div>
       <div className="text-[13px] text-[var(--muted)] mb-5">{student.name} · {student.school} · {student.major}</div>
 
-      <SumRow label="Applicant Type">{strategy.positioning.type}</SumRow>
-      <SumRow label={`Who is ${firstName}?`}>{firstSentence(strategy.positioning.identity)}</SumRow>
-      <SumRow label="Portfolio Outlook">{outlook}</SumRow>
-      {comp && (
-        <SumRow label="Competitiveness">
-          <span className="inline-flex flex-wrap gap-2">
-            <Chip tone="neutral">Top 10: {comp.top10.level}</Chip>
-            <Chip tone="neutral">Top 20: {comp.top20.level}</Chip>
-            <Chip tone="neutral">Top 50: {comp.top50.level}</Chip>
-          </span>
-        </SumRow>
-      )}
-      <SumRow label={`School List (${strategy.schools.reach.length + strategy.schools.match.length + strategy.schools.safety.length})`}>
-        <div className="flex flex-col gap-1 text-[13px]">
-          {strategy.schools.reach.length > 0 && <div><span className="font-semibold text-[#B91C1C]">Reach:</span> {tierNames(strategy.schools.reach)}</div>}
-          {strategy.schools.match.length > 0 && <div><span className="font-semibold text-[var(--accent)]">Match:</span> {tierNames(strategy.schools.match)}</div>}
-          {strategy.schools.safety.length > 0 && <div><span className="font-semibold text-[#15803D]">Safety:</span> {tierNames(strategy.schools.safety)}</div>}
+      {/* Hero: applicant type + portfolio outlook */}
+      <div className="grid sm:grid-cols-2 gap-3 mb-6">
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--bg-soft)] p-4">
+          <SumLabel>Applicant Type</SumLabel>
+          <p className="text-[15px] font-semibold text-[var(--ink)] leading-snug">{strategy.positioning.type}</p>
         </div>
-      </SumRow>
-      <SumRow label="Early Round (ED/EA)">{firstSentence(strategy.strategy.ed_ea)}</SumRow>
+        <div className="rounded-xl border border-[var(--accent-100)] bg-[var(--accent-50)] p-4">
+          <SumLabel>Portfolio Outlook</SumLabel>
+          <div className="text-[26px] font-bold text-[var(--accent)] leading-none tabular-nums">{outlook}</div>
+          <p className="text-[12px] text-[var(--muted)] mt-1">modeled chance of at least one admit</p>
+        </div>
+      </div>
 
-      <div className="mt-5 rounded-lg bg-[var(--accent-50)] border border-[var(--accent-100)] px-4 py-3 text-[12.5px] text-[var(--ink-soft)] leading-relaxed">
+      {/* Who is */}
+      <div className="mb-6">
+        <SumLabel>Who is {firstName}?</SumLabel>
+        <p className="text-[14px] text-[var(--ink)] leading-relaxed">{firstSentence(strategy.positioning.identity)}</p>
+      </div>
+
+      {/* Competitiveness — colored by tier level */}
+      {comp && (
+        <div className="mb-6">
+          <SumLabel>Competitiveness</SumLabel>
+          <div className="flex flex-wrap gap-2">
+            <Chip tone={levelTone(comp.top10.level)}>Top 10 · {comp.top10.level}</Chip>
+            <Chip tone={levelTone(comp.top20.level)}>Top 20 · {comp.top20.level}</Chip>
+            <Chip tone={levelTone(comp.top50.level)}>Top 50 · {comp.top50.level}</Chip>
+          </div>
+        </div>
+      )}
+
+      {/* School list — grouped, color-coded pills */}
+      <div className="mb-6">
+        <SumLabel>School List · {total}</SumLabel>
+        <div className="flex flex-col gap-2.5">
+          {TIER_META_SUM.map(t => {
+            const list = strategy.schools[t.key];
+            if (!list.length) return null;
+            return (
+              <div key={t.key} className="flex items-start gap-2.5">
+                <span className={`shrink-0 mt-0.5 text-[10.5px] font-bold uppercase tracking-wide px-2 py-1 rounded-md ${t.ring}`}>{t.label} · {list.length}</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {list.map((s, i) => (
+                    <span key={i} className="text-[12px] text-[var(--ink)] bg-[var(--bg-soft)] border border-[var(--line)] rounded-full px-2.5 py-0.5">{s.name}</span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Early round callout */}
+      <div className="rounded-xl border-l-4 border-l-[#D97706] border border-[var(--line)] bg-[#FEF9F0] px-4 py-3 mb-5">
+        <SumLabel>Early Round · ED / EA</SumLabel>
+        <p className="text-[13.5px] text-[var(--ink)] leading-relaxed">{firstSentence(strategy.strategy.ed_ea)}</p>
+      </div>
+
+      <div className="rounded-lg bg-[var(--accent-50)] border border-[var(--accent-100)] px-4 py-3 text-[12.5px] text-[var(--ink-soft)] leading-relaxed">
         This is the short version. The full reasoning, evidence labels, and the complete six volumes live in the <span className="font-semibold text-[var(--accent)]">Blueprint Journey™</span> — download it above.
       </div>
     </div>
