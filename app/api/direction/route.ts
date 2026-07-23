@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       .from('strategies').select('data').eq('student_id', studentId).eq('user_id', user.id).maybeSingle();
     const storedAssessment = (strategyRow?.data as Strategy | undefined)?.v2?.assessment;
 
-    const rl = checkRateLimit(`direction:${user.id}`, 12, 60 * 60 * 1000);
+    const rl = await checkRateLimit(`direction:${user.id}`, 12, 60 * 60 * 1000);
     if (!rl.ok) return NextResponse.json({ error: rateLimitMessage('Direction', rl) }, { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } });
     if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 });
 

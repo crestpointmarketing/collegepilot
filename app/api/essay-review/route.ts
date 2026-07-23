@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-    const rl = checkRateLimit(`essay-review:${user.id}`, 15, 60 * 60 * 1000);
+    const rl = await checkRateLimit(`essay-review:${user.id}`, 15, 60 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json({ error: rateLimitMessage('Essay review', rl) },
         { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } });

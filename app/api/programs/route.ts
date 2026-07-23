@@ -405,7 +405,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Cache miss or forced refresh — this is the expensive path (3 Firecrawl fetches + possible AI extraction)
-    const rl = checkRateLimit(`programs:${user.id}`, 10, 60 * 60 * 1000);
+    const rl = await checkRateLimit(`programs:${user.id}`, 10, 60 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json(
         { error: rateLimitMessage('Program fetching', rl) },

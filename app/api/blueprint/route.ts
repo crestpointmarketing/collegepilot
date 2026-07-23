@@ -223,7 +223,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
     const priorBlueprint = (priorRow?.data as Blueprint | undefined) ?? null;
 
-    const rl = checkRateLimit(`blueprint:${user.id}`, 8, 60 * 60 * 1000);
+    const rl = await checkRateLimit(`blueprint:${user.id}`, 8, 60 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json(
         { error: rateLimitMessage('Blueprint generation', rl) },

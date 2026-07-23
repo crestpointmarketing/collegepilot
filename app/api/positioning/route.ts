@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       .from('strategies').select('data').eq('student_id', studentId).eq('user_id', user.id).maybeSingle();
     const storedAssessment = (strategyRow?.data as Strategy | undefined)?.v2?.assessment;
 
-    const rl = checkRateLimit(`positioning:${user.id}`, 12, 60 * 60 * 1000);
+    const rl = await checkRateLimit(`positioning:${user.id}`, 12, 60 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json({ error: rateLimitMessage('Positioning', rl) },
         { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } });

@@ -193,7 +193,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Two LLM calls per generation — cap per user
-    const rl = checkRateLimit(`strategy:${user.id}`, 10, 60 * 60 * 1000);
+    const rl = await checkRateLimit(`strategy:${user.id}`, 10, 60 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json(
         { error: rateLimitMessage('Strategy generation', rl) },

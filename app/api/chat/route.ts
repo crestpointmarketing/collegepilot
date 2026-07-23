@@ -193,7 +193,7 @@ export async function POST(req: NextRequest) {
       return new Response('Not authenticated', { status: 401 });
     }
 
-    const rl = checkRateLimit(`chat:${user.id}`, 60, 60 * 60 * 1000);
+    const rl = await checkRateLimit(`chat:${user.id}`, 60, 60 * 60 * 1000);
     if (!rl.ok) {
       return new Response(rateLimitMessage('Chat', rl), {
         status: 429,

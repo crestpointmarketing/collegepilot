@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     if (!studentRow) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     const student = studentRow.data as Student;
 
-    const rl = checkRateLimit(`ao:${user.id}`, 20, 60 * 60 * 1000);
+    const rl = await checkRateLimit(`ao:${user.id}`, 20, 60 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json({ error: rateLimitMessage('AO perspective', rl) },
         { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } });

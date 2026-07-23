@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const rl = checkRateLimit(`research:${user.id}`, 15, 60 * 60 * 1000);
+    const rl = await checkRateLimit(`research:${user.id}`, 15, 60 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json(
         { error: rateLimitMessage('School research', rl) },

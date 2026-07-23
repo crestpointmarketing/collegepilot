@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-    const rl = checkRateLimit(`essay-angles:${user.id}`, 20, 60 * 60 * 1000);
+    const rl = await checkRateLimit(`essay-angles:${user.id}`, 20, 60 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json({ error: rateLimitMessage('Angle generation', rl) },
         { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } });
