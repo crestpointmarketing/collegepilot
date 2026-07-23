@@ -68,11 +68,9 @@ export default function EssayWorkspacePage() {
     if (mining) return;
     setMining(true); setErr(null); setMineNote('Mining angles… this usually takes ~45 seconds — please wait.');
     const t0 = Date.now();
-    console.log('[essays] mine: start', { projectId });
     const tick = setInterval(() => setMineNote(`Mining angles… ${Math.round((Date.now() - t0) / 1000)}s (usually ~45s).`), 1000);
     try {
-      const res = await fetchStreamedJson('/api/essay-angles', { projectId });
-      console.log('[essays] mine: ok', res);
+      await fetchStreamedJson('/api/essay-angles', { projectId });
       await load();
       setTab('angles');
       setMineNote(null);
@@ -91,15 +89,25 @@ export default function EssayWorkspacePage() {
     if (savingId) return;
     setSavingId(angleId); setErr(null);
     const { error } = await supabase.from('essay_angles').update({ disposition }).eq('id', angleId);
-    if (!error && disposition === 'selected') {
-      await supabase.from('essay_projects')
+    if (error) { setErr(error.message); setSavingId(null); return; }
+
+    if (disposition === 'selected') {
+      const { error: e1 } = await supabase.from('essay_projects')
         .update({ selected_angle_id: angleId, workflow_status: 'angle_selected', updated_at: new Date().toISOString() })
         .eq('id', projectId);
       // Only one selected angle at a time.
-      await supabase.from('essay_angles').update({ disposition: 'saved' })
+      const { error: e2 } = await supabase.from('essay_angles').update({ disposition: 'saved' })
         .eq('project_id', projectId).eq('disposition', 'selected').neq('id', angleId);
+      if (e1 || e2) setErr((e1 ?? e2)!.message);
+    } else if (disposition === 'rejected' && project.selected_angle_id === angleId) {
+      // Rejecting the currently-selected angle must clear it — otherwise the
+      // project stays "Angle Selected" and reviews keep grading the rejected
+      // direction while the UI shows none selected.
+      const { error: e3 } = await supabase.from('essay_projects')
+        .update({ selected_angle_id: null, workflow_status: 'exploring_angles', updated_at: new Date().toISOString() })
+        .eq('id', projectId);
+      if (e3) setErr(e3.message);
     }
-    if (error) setErr(error.message);
     setSavingId(null);
     await load();
   };
@@ -162,7 +170,7 @@ export default function EssayWorkspacePage() {
         <div className="flex flex-col gap-4">
           {angles.length === 0 && (
             <Card bodyClassName="px-6 py-10 text-center">
-              <p className="text-[13.5px] text-[var(--muted)] mb-4">No angles yet — mine 3–5 evidence-backed directions for this prompt.</p>
+              <p className="text-[13.5px] text-[var(--muted)] mb-4">No angles yet — mine 3–4 evidence-backed directions for this prompt.</p>
               <PrimaryButton onClick={mine} className={mining ? 'opacity-60 pointer-events-none' : ''}>
                 {mining ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Mine angles
               </PrimaryButton>

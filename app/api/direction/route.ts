@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
 
     const { data: studentRow, error: studentError } = await supabase
       .from('students').select('data').eq('id', studentId).eq('user_id', user.id).maybeSingle();
-    if (studentError) return NextResponse.json({ error: studentError.message }, { status: 500 });
+    if (studentError) { console.error('direction: student load failed:', studentError); return NextResponse.json({ error: 'Could not load the student.' }, { status: 500 }); }
     if (!studentRow) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     const student = studentRow.data as Student;
 

@@ -180,7 +180,8 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (studentError) {
-      return NextResponse.json({ error: studentError.message }, { status: 500 });
+      console.error('strategy: student load failed:', studentError);
+      return NextResponse.json({ error: 'Could not load the student.' }, { status: 500 });
     }
     if (!studentRow) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });

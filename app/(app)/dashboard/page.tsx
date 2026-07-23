@@ -63,10 +63,10 @@ export default function DashboardPage() {
       {students.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[
-            { label: 'Total students',    value: stats.total, delta: '+2 this week' },
-            { label: 'Active strategies', value: stats.active, delta: `Across ${stats.active} students` },
-            { label: 'Document-ready',    value: stats.ready, delta: '+1 vs last week' },
-            { label: 'Avg. GPA (weighted)', value: stats.avgGpa, delta: 'Cohort weighted average' },
+            { label: 'Total students',    value: stats.total, delta: `${stats.total} in your workspace` },
+            { label: 'Active strategies', value: stats.active, delta: 'not yet document-ready' },
+            { label: 'Document-ready',    value: stats.ready, delta: 'ready to submit' },
+            { label: 'Avg. GPA (weighted)', value: stats.avgGpa, delta: 'cohort weighted average' },
           ].map(stat => (
             <StatTile key={stat.label} label={stat.label} value={String(stat.value)} sub={stat.delta} />
           ))}

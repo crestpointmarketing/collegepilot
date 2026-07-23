@@ -157,7 +157,7 @@ function AddEssayModal({ studentId, preferredSchoolIds, onClose, onCreated }: {
       ? [...pickedIds].map(pid => ({ student_id: studentId, user_id: user.id, school_id: schoolId, prompt_id: pid }))
       : [{
           student_id: studentId, user_id: user.id, school_id: schoolId, prompt_id: null,
-          custom_prompt: { promptText: customText.trim(), wordLimit: customLimit ? parseInt(customLimit) : undefined, promptType: customType },
+          custom_prompt: { promptText: customText.trim(), wordLimit: Number.isFinite(parseInt(customLimit)) ? parseInt(customLimit) : undefined, promptType: customType },
         }];
     if (mode === 'custom' && !customText.trim()) { setErr('Paste the prompt text first.'); setSaving(false); return; }
     if (mode === 'library' && rows.length === 0) { setErr('Pick at least one prompt.'); setSaving(false); return; }

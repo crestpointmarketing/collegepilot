@@ -51,7 +51,7 @@ export function buildAngleMinerPrompt(opts: {
 - Common App directions already planned: ${(nar?.commonAppDirections ?? []).map(d => d.direction).join(' | ') || '(none)'}`
     : 'BLUEPRINT: not generated yet — anchor to the confirmed focus below and the raw evidence.';
 
-  return `Mine 3–5 essay ANGLES for the prompt below. Directions to test, never prose.
+  return `Mine 3–4 essay ANGLES for the prompt below. Directions to test, never prose.
 
 === THE PROMPT (${school.name}${program ? ` · ${program}` : ''}${wordLimit ? ` · ${wordLimit} words` : ''}) ===
 ${promptText}
@@ -70,5 +70,5 @@ ${serializeConfirmedFocus(student)}
 Existing angles for this prompt: ${existingAngles.length ? existingAngles.join(' | ') : '(none)'}
 Topics used by this student's other essays: ${siblingEssayTopics.length ? siblingEssayTopics.join(' | ') : '(none)'}
 
-Return 3–5 genuinely different angles. Cite evidence by its exact profile name. Mark every school trait not in SCHOOL FACTS as unverified.`;
+Return 3–4 genuinely different angles. Cite evidence by its exact profile name. Mark every school trait not in SCHOOL FACTS as unverified.`;
 }

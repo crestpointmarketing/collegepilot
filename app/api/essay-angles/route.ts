@@ -8,7 +8,6 @@ import { SCHOOLS } from '@/lib/schools';
 import { getPrompt } from '@/lib/essays/promptLibrary';
 import { angleMinerOutputSchema, angleMinerJsonSchema, type AngleMinerOutput } from '@/lib/essays/angleSchema';
 import { ANGLE_MINER_SYSTEM_PROMPT, buildAngleMinerPrompt } from '@/lib/essays/anglePrompt';
-import { getSchoolFacts } from '@/lib/admissions/schoolFacts';
 import type { EssayAngle, EssayProjectRow } from '@/lib/essays/types';
 import type { Blueprint } from '@/lib/admissions/blueprint';
 import type { Student } from '@/types';
@@ -46,7 +45,7 @@ async function mineAngles(client: Anthropic, system: string, prompt: string, all
       messages: [{ role: 'user', content }],
       tools: [{
         name: 'submit_angles',
-        description: 'Submit 3-5 essay angles (directions to test, never prose).',
+        description: 'Submit 3-4 essay angles (directions to test, never prose).',
         input_schema: angleMinerJsonSchema() as Anthropic.Tool['input_schema'],
       }],
       tool_choice: { type: 'tool', name: 'submit_angles' },
@@ -162,12 +161,15 @@ export async function POST(req: NextRequest) {
             allowedEvidenceNames(student),
           );
 
-          // Force honesty labels in code, not trust: working_hypothesis always;
-          // a school hook is only "verified" when the school has facts on file.
-          const hasFacts = !!getSchoolFacts(school.id);
+          // Force honesty labels in code, not trust. Every angle is a
+          // working_hypothesis. And EVERY school hook is 'unverified': our
+          // school data is admissions POLICY, not a verified database of
+          // school traits (labs, professors, culture), so no trait a model
+          // asserts can be genuinely verified — the student must confirm it on
+          // the official page. Never render a green "verified" hook we can't back.
           const angles: EssayAngle[] = output.angles.map(a => ({
             ...a,
-            schoolHookStatus: hasFacts ? a.schoolHookStatus : 'unverified',
+            schoolHookStatus: 'unverified' as const,
             status: 'working_hypothesis' as const,
           }));
 

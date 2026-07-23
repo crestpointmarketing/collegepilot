@@ -46,11 +46,13 @@ export function DraftReview({ projectId, wordLimit, workflowStatus, onChanged }:
     } else setReviews([]);
   }, [supabase, projectId]);
 
-  // Restore the local autosave, then load history — hydration, not a cascade.
+  // Restore this project's local autosave, then load history — hydration, not
+  // a cascade. Always reset text (even to '') so switching projects without a
+  // full unmount never carries one essay's draft into another.
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem(draftKey) : null;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (saved) setText(saved);
+    setText(saved ?? '');
     void load();
   }, [draftKey, load]);
 
@@ -74,7 +76,9 @@ export function DraftReview({ projectId, wordLimit, workflowStatus, onChanged }:
       name: versionName.trim() || null, content: text, word_count: words, source: 'student',
     });
     if (error) { setErr(error.message); setBusy(null); return; }
-    if (workflowStatus === 'not_started' || workflowStatus === 'exploring_angles' || workflowStatus === 'angle_selected') {
+    // A fresh version means active drafting — advance from pre-draft states AND
+    // clear a prior "needs revision" so a revised draft doesn't look ignored.
+    if (['not_started', 'exploring_angles', 'angle_selected', 'needs_revision'].includes(workflowStatus)) {
       await supabase.from('essay_projects').update({ workflow_status: 'drafting', updated_at: new Date().toISOString() }).eq('id', projectId);
     }
     setVersionName('');
@@ -86,14 +90,20 @@ export function DraftReview({ projectId, wordLimit, workflowStatus, onChanged }:
   const requestReview = async (revisionId: string) => {
     if (busy) return;
     setBusy('review'); setErr(null);
+    const prevStatus = workflowStatus;
     try {
       await supabase.from('essay_projects').update({ workflow_status: 'ready_for_review', updated_at: new Date().toISOString() }).eq('id', projectId);
       await fetchStreamedJson('/api/essay-review', { revisionId });
       await load();
       onChanged();
       setViewRevId(revisionId);
-    } catch (e) { setErr(e instanceof Error ? e.message : 'Review failed.'); }
-    finally { setBusy(null); }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Review failed.');
+      // Roll the status back so a failed review doesn't strand the essay at
+      // "ready for review".
+      await supabase.from('essay_projects').update({ workflow_status: prevStatus, updated_at: new Date().toISOString() }).eq('id', projectId);
+      onChanged();
+    } finally { setBusy(null); }
   };
 
   const markFinal = async () => {
@@ -169,9 +179,16 @@ export function DraftReview({ projectId, wordLimit, workflowStatus, onChanged }:
           </div>
           <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
             <span className="text-[11.5px] text-[var(--muted)]">v{viewed.revision_number} · {viewed.word_count} words · {new Date(viewed.created_at).toLocaleDateString()}</span>
-            <PrimaryButton onClick={() => requestReview(viewed.id)} className={busy ? 'opacity-50 pointer-events-none' : ''}>
-              {busy === 'review' ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {viewedReviews.length ? 'Review again' : 'Request review'}
-            </PrimaryButton>
+            {workflowStatus === 'final' ? (
+              // Reviewing a finalized essay reopens it — make that deliberate, not silent.
+              <GhostButton onClick={() => requestReview(viewed.id)} className={busy ? 'opacity-50 pointer-events-none' : ''}>
+                {busy === 'review' ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} Reopen &amp; review
+              </GhostButton>
+            ) : (
+              <PrimaryButton onClick={() => requestReview(viewed.id)} className={busy ? 'opacity-50 pointer-events-none' : ''}>
+                {busy === 'review' ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {viewedReviews.length ? 'Review again' : 'Request review'}
+              </PrimaryButton>
+            )}
           </div>
         </Card>
       )}

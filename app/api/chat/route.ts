@@ -304,6 +304,7 @@ ${sections}`;
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     });
   } catch (err) {
-    return new Response(String(err), { status: 500 });
+    console.error('chat error:', err);
+    return new Response('Chat failed. Please try again.', { status: 500 });
   }
 }

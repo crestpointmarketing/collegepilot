@@ -138,7 +138,8 @@ export default function BlueprintPage() {
       validations: [],
       confirmed: [],
     };
-    if (student) await saveStudentDraft({ ...student, positioning: next });
+    const ok = student ? await saveStudentDraft({ ...student, positioning: next }) : false;
+    if (!ok) throw new Error('The hypotheses were generated but could not be saved — your session may have expired. Refresh the page, sign in again, and retry.');
     setRevisiting(false);
   });
 
@@ -151,9 +152,13 @@ export default function BlueprintPage() {
 
   async function confirmIdentity(dirs: ConfirmedDirection[], validations: HypothesisValidation[]) {
     if (!student || !positioning) return;
-    setSaving(true);
-    await saveStudentDraft({ ...student, positioning: { ...positioning, confirmed: dirs, validations } });
+    setSaving(true); setError(null);
+    const ok = await saveStudentDraft({ ...student, positioning: { ...positioning, confirmed: dirs, validations } });
     setSaving(false);
+    if (!ok) {
+      setError('Could not save your confirmed identity — your session may have expired. Refresh the page, sign in again, and confirm once more.');
+      return;
+    }
     setRevisiting(false);
   }
 
